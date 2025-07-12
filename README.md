@@ -2,6 +2,19 @@
 
 A modern, feature-rich Q&A forum built with Next.js, Express.js, MongoDB, and Socket.IO. StackIt provides a comprehensive platform for asking questions, sharing knowledge, and building a community around knowledge exchange.
 
+## 👥 Team Details
+
+### Problem Statement 2: StackIt – A Minimal Q&A Forum Platform
+
+**Team Name:** JBBR
+
+**Team Members:**
+
+- **Harshil Bhanushali** - harshilbhanushali11@gmail.com
+- **Jay Guri** - jaymanishguri@gmail.com
+- **Ayush Patel** - ayushptl18@gmail.com
+- **Akshat Singh** - sakshat193@gmail.com
+
 ## 🚀 Features
 
 ### Core Q&A System
@@ -402,15 +415,4 @@ If you encounter any issues or have questions:
 
 ---
 
-## 👥 Team Details
 
-### Problem Statement 2: StackIt – A Minimal Q&A Forum Platform
-
-**Team Name:** JBBR
-
-**Team Members:**
-
-- **Harshil Bhanushali** - harshilbhanushali11@gmail.com
-- **Jay Guri** - jaymanishguri@gmail.com
-- **Ayush Patel** - ayushptl18@gmail.com
-- **Akshat Singh** - sakshat193@gmail.com
