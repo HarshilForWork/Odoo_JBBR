@@ -31,11 +31,23 @@ router.get("/stats", async (req, res) => {
       createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     });
 
-    // Get top users
-    const topUsers = await User.find({})
-      .sort({ questionCount: -1, answerCount: -1 })
-      .limit(5)
-      .select("username questionCount answerCount");
+    // Dynamically calculate top users
+    const allUsers = await User.find({});
+    const usersWithCounts = await Promise.all(
+      allUsers.map(async (user) => {
+        const questionCount = await Question.countDocuments({ author: user._id });
+        const answerCount = await Answer.countDocuments({ author: user._id });
+        return {
+          username: user.username,
+          questionCount,
+          answerCount,
+        };
+      })
+    );
+    // Sort by total contributions (questions + answers)
+    const topUsers = usersWithCounts
+      .sort((a, b) => (b.questionCount + b.answerCount) - (a.questionCount + a.answerCount))
+      .slice(0, 5);
 
     res.json({
       totalUsers,
@@ -91,10 +103,23 @@ router.get("/users", async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Dynamically calculate questionCount and answerCount for each user
+    const usersWithCounts = await Promise.all(
+      users.map(async (user) => {
+        const questionCount = await Question.countDocuments({ author: user._id });
+        const answerCount = await Answer.countDocuments({ author: user._id });
+        return {
+          ...user.toObject(),
+          questionCount,
+          answerCount,
+        };
+      })
+    );
+
     const total = await User.countDocuments(query);
 
     res.json({
-      users,
+      users: usersWithCounts,
       total,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / limit),
