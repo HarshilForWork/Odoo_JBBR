@@ -69,7 +69,7 @@ export default function HomePage() {
         setLoading(true);
         const endpoint = showMyPosts ? "/my-questions" : "";
         const response = await axios.get(
-          `http://localhost:5000/api/questions${endpoint}`,
+          `http://localhost:5001/api/questions${endpoint}`,
           {
             params: {
               page: 1,
@@ -239,7 +239,7 @@ export default function HomePage() {
       setLoading(true);
       const endpoint = showMyPosts ? "/my-questions" : "";
       const response = await axios.get(
-        `http://localhost:5000/api/questions${endpoint}`,
+        `http://localhost:5001/api/questions${endpoint}`,
         {
           params: {
             page: currentPage,
