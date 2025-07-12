@@ -23,13 +23,13 @@ export default function LoginPage() {
       // Try login with email first, then username if email fails
       let res;
       try {
-        res = await axios.post("http://localhost:5000/api/auth/login", {
+        res = await axios.post("http://localhost:5001/api/auth/login", {
           email: identifier,
           password,
         });
       } catch (err: any) {
         // If email login fails, try username
-        res = await axios.post("http://localhost:5000/api/auth/login", {
+        res = await axios.post("http://localhost:5001/api/auth/login", {
           username: identifier,
           password,
         });

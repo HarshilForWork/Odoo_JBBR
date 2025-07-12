@@ -31,7 +31,7 @@ export default function AskPage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5000/api/auth/profile", {
+        .get("http://localhost:5001/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -58,7 +58,7 @@ export default function AskPage() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://localhost:5000/api/questions",
+        "http://localhost:5001/api/questions",
         {
           title: title.trim(),
           description,

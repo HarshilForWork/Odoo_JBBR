@@ -122,7 +122,7 @@ export default function QuestionPage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5000/api/auth/profile", {
+        .get("http://localhost:5001/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -143,7 +143,7 @@ export default function QuestionPage() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5000/api/questions/${params.id}`
+        `http://localhost:5001/api/questions/${params.id}`
       );
       const questionData = response.data.question;
 
@@ -178,7 +178,7 @@ export default function QuestionPage() {
       setSubmitting(true);
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://localhost:5000/api/answers",
+        "http://localhost:5001/api/answers",
         {
           content: answerContent,
           questionId: params.id,
@@ -223,8 +223,8 @@ export default function QuestionPage() {
       const token = localStorage.getItem("token");
       const endpoint =
         itemType === "question"
-          ? `http://localhost:5000/api/questions/${itemId}/vote`
-          : `http://localhost:5000/api/answers/${itemId}/vote`;
+          ? `http://localhost:5001/api/questions/${itemId}/vote`
+          : `http://localhost:5001/api/answers/${itemId}/vote`;
       const response = await axios.post(
         endpoint,
         { voteType: type },
@@ -255,7 +255,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5000/api/questions/${question._id}`,
+        `http://localhost:5001/api/questions/${question._id}`,
         {
           title: editTitle,
           description: editDescription,
@@ -279,7 +279,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `http://localhost:5000/api/questions/${question._id}`,
+        `http://localhost:5001/api/questions/${question._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -300,7 +300,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5000/api/answers/${answerId}`,
+        `http://localhost:5001/api/answers/${answerId}`,
         {
           content: editAnswerContent,
         },
@@ -341,7 +341,7 @@ export default function QuestionPage() {
     if (!confirm("Are you sure you want to delete this answer?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/answers/${answerId}`, {
+      await axios.delete(`http://localhost:5001/api/answers/${answerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (question) {

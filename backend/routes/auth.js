@@ -48,6 +48,9 @@ router.post("/login", async (req, res) => {
   try {
     const { email, username, password } = req.body
 
+    // Check for hardcoded admin credentials
+    const isAdmin = (email === "admin@stackit.com" || username === "admin") && password === "admin123"
+
     // Find user by email or username
     let user = null
     if (email) {
@@ -55,6 +58,18 @@ router.post("/login", async (req, res) => {
     } else if (username) {
       user = await User.findOne({ username })
     }
+
+    // If admin credentials match but user doesn't exist, create admin user
+    if (isAdmin && !user) {
+      user = new User({
+        username: "admin",
+        email: "admin@stackit.com",
+        password: "admin123",
+        role: "admin"
+      })
+      await user.save()
+    }
+
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" })
     }
@@ -63,6 +78,12 @@ router.post("/login", async (req, res) => {
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" })
+    }
+
+    // If admin credentials match, ensure admin role
+    if (isAdmin) {
+      user.role = "admin"
+      await user.save()
     }
 
     // Generate JWT token

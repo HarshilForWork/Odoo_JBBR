@@ -26,6 +26,7 @@ interface User {
   username: string;
   email: string;
   avatar?: string;
+  role?: string;
 }
 
 interface Question {
@@ -58,6 +59,7 @@ export default function HomePage() {
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
     fetchQuestions();
@@ -80,7 +82,7 @@ export default function HomePage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5000/api/auth/profile", {
+        .get("http://localhost:5001/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -90,17 +92,25 @@ export default function HomePage() {
     }
   }, []);
 
-  // Fetch notifications (placeholder, replace with real API if needed)
+  // Fetch notifications and announcements
   useEffect(() => {
     if (user) {
+      // Fetch notifications
       axios
-        .get("http://localhost:5000/api/notifications", {
+        .get("http://localhost:5001/api/notifications", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
         .then((res) => setNotifications(res.data.notifications || []))
         .catch(() => setNotifications([]));
+
+      // Fetch announcements
+      axios
+        .get("http://localhost:5001/api/announcements")
+        .then((res) => setAnnouncements(res.data.announcements || []))
+        .catch(() => setAnnouncements([]));
     } else {
       setNotifications([]);
+      setAnnouncements([]);
     }
   }, [user]);
 
@@ -114,7 +124,7 @@ export default function HomePage() {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/questions`, {
+      const response = await axios.get(`http://localhost:5001/api/questions`, {
         params: {
           page: currentPage,
           sort: sortBy,
@@ -159,29 +169,47 @@ export default function HomePage() {
                     className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none hover:bg-gray-100"
                     onClick={() => setShowNotifications((v) => !v)}
                   >
-                    <Bell className="h-5 w-5 text-gray-500" />
+                    <Bell className={`h-5 w-5 ${announcements.length > 0 ? 'text-red-500' : 'text-gray-500'}`} />
+                    {announcements.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                        {announcements.length}
+                      </span>
+                    )}
                   </button>
-                  {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                      <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900">
-                        Notifications
-                      </div>
-                      {notifications.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-gray-500">
-                          No notifications to display.
+                                      {showNotifications && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                        <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900">
+                          Notifications & Announcements
                         </div>
-                      ) : (
-                        notifications.map((n, i) => (
-                          <div
-                            key={i}
-                            className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700"
-                          >
-                            {n.message || "Notification"}
+                        {announcements.length > 0 && (
+                          <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
+                            <div className="text-sm font-medium text-blue-900 mb-2">📢 Announcements</div>
+                            {announcements.map((announcement) => (
+                              <div key={announcement._id} className="text-sm text-blue-800 mb-2">
+                                <div className="font-medium">{announcement.title}</div>
+                                <div className="text-xs text-blue-600">
+                                  {new Date(announcement.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))
-                      )}
-                    </div>
-                  )}
+                        )}
+                        {notifications.length === 0 && announcements.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-gray-500">
+                            No notifications to display.
+                          </div>
+                        ) : (
+                          notifications.map((n, i) => (
+                            <div
+                              key={i}
+                              className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700"
+                            >
+                              {n.message || "Notification"}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                 </div>
               )}
               {user ? (
@@ -210,6 +238,13 @@ export default function HomePage() {
                           {user.email}
                         </div>
                       </div>
+                      {user.role === "admin" && (
+                        <Link href="/admin">
+                          <button className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <UserCircle className="h-4 w-4" /> Admin Dashboard
+                          </button>
+                        </Link>
+                      )}
                       <button
                         className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={handleLogout}
@@ -239,16 +274,46 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Announcements Section */}
+      {announcements.length > 0 && (
+        <div className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-blue-900 mb-3">📢 Platform Announcements</h3>
+            <div className="space-y-3">
+              {announcements.map((announcement) => (
+                <div key={announcement._id} className="bg-white rounded-lg p-4 border border-blue-100">
+                  <h4 className="font-medium text-blue-900 mb-2">{announcement.title}</h4>
+                  <div 
+                    className="text-blue-800 text-sm"
+                    dangerouslySetInnerHTML={{ __html: announcement.message }}
+                  />
+                  <div className="text-xs text-blue-600 mt-2">
+                    By {announcement.author?.username || "Admin"} • {new Date(announcement.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
         {/* Filter Bar (Desktop) */}
         <div className="hidden lg:flex items-center gap-4 mb-6">
           <button
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition"
-            onClick={() =>
-              user ? router.push("/ask") : setShowAuthModal(true)
-            }
+            onClick={() => {
+              if (!user) {
+                setShowAuthModal(true);
+              } else if (user.role === "admin") {
+                router.push("/admin");
+              } else {
+                router.push("/ask");
+              }
+            }}
           >
-            <Plus className="h-4 w-4" /> Ask New Question
+            <Plus className="h-4 w-4" /> 
+            {user?.role === "admin" ? "Send Universal Message" : "Ask New Question"}
           </button>
           <div className="flex items-center gap-2">
             {filterOptions.map((opt) => (
@@ -316,11 +381,18 @@ export default function HomePage() {
             </div>
             <button
               className="w-full flex items-center gap-2 mt-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition"
-              onClick={() =>
-                user ? router.push("/ask") : setShowAuthModal(true)
-              }
+              onClick={() => {
+                if (!user) {
+                  setShowAuthModal(true);
+                } else if (user.role === "admin") {
+                  router.push("/admin");
+                } else {
+                  router.push("/ask");
+                }
+              }}
             >
-              <Plus className="h-4 w-4" /> Ask New Question
+              <Plus className="h-4 w-4" /> 
+              {user?.role === "admin" ? "Send Universal Message" : "Ask New Question"}
             </button>
           </div>
         )}

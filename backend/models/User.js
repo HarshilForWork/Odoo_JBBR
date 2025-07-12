@@ -31,6 +31,33 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
+    banReason: {
+      type: String,
+      default: "",
+    },
+    bannedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    bannedAt: {
+      type: Date,
+    },
+    lastLogin: {
+      type: Date,
+      default: Date.now,
+    },
+    questionCount: {
+      type: Number,
+      default: 0,
+    },
+    answerCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

@@ -64,8 +64,11 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/questions", require("./routes/questions"));
 app.use("/api/answers", require("./routes/answers"));
 app.use("/api/notifications", require("./routes/notifications"));
+app.use("/api/admin", require("./routes/admin"));
+app.use("/api/announcements", require("./routes/announcements"));
+app.use("/api/global-messages", require("./routes/admin"));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
