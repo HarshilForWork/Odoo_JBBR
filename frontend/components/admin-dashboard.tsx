@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface User {
   _id: string;
@@ -105,6 +106,7 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("project");
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -146,35 +148,35 @@ export default function AdminDashboard() {
 
       // Fetch stats
       const statsRes = await axios.get(
-        "http://localhost:5000/api/admin/stats",
+        "http://localhost:5001/api/admin/stats",
         { headers }
       );
       setStats(statsRes.data);
 
       // Fetch users
       const usersRes = await axios.get(
-        "http://localhost:5000/api/admin/users",
+        "http://localhost:5001/api/admin/users",
         { headers }
       );
       setUsers(usersRes.data.users);
 
       // Fetch questions
       const questionsRes = await axios.get(
-        "http://localhost:5000/api/admin/questions",
+        "http://localhost:5001/api/admin/questions",
         { headers }
       );
       setQuestions(questionsRes.data.questions);
 
       // Fetch answers
       const answersRes = await axios.get(
-        "http://localhost:5000/api/admin/answers",
+        "http://localhost:5001/api/admin/answers",
         { headers }
       );
       setAnswers(answersRes.data.answers);
 
       // Fetch global messages
       const messagesRes = await axios.get(
-        "http://localhost:5000/api/admin/global-messages",
+        "http://localhost:5001/api/admin/global-messages",
         { headers }
       );
       setGlobalMessages(messagesRes.data.messages);
@@ -189,7 +191,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}/role`,
+        `http://localhost:5001/api/admin/users/${userId}/role`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -213,7 +215,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/admin/users/${userToBan._id}/ban`,
+        `http://localhost:5001/api/admin/users/${userToBan._id}/ban`,
         { isBanned: true, banReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -231,7 +233,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}/ban`,
+        `http://localhost:5001/api/admin/users/${userId}/ban`,
         { isBanned: false, banReason: "" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -253,7 +255,7 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/admin/users/${userId}`, {
+      await axios.delete(`http://localhost:5001/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("User deleted successfully");
@@ -275,7 +277,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `http://localhost:5000/api/admin/questions/${questionId}`,
+        `http://localhost:5001/api/admin/questions/${questionId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -301,7 +303,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `http://localhost:5000/api/admin/answers/${answerId}`,
+        `http://localhost:5001/api/admin/answers/${answerId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -317,19 +319,23 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:5000/api/admin/users/${user._id}`,
+        `http://localhost:5001/api/admin/users/${user._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setUserQuestions(response.data.questions);
-      setUserAnswers(response.data.answers);
+      // Ensure we have arrays even if the backend returns null/undefined
+      setUserQuestions(response.data.questions || []);
+      setUserAnswers(response.data.answers || []);
       setSelectedUser(user);
       setShowUserDetails(true);
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Failed to fetch user details"
       );
+      // Set empty arrays on error to prevent further issues
+      setUserQuestions([]);
+      setUserAnswers([]);
     }
   };
 
@@ -342,7 +348,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5000/api/admin/global-messages",
+        "http://localhost:5001/api/admin/global-messages",
         {
           title: globalMessageTitle.trim(),
           message: globalMessageContent,
@@ -373,7 +379,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `http://localhost:5000/api/admin/global-messages/${messageId}`,
+        `http://localhost:5001/api/admin/global-messages/${messageId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Global message deleted successfully");
@@ -386,13 +392,17 @@ export default function AdminDashboard() {
   };
 
   const handleCleanupNotifications = async () => {
+    if (!confirm("Are you sure you want to cleanup old notifications? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const response = await axios.delete(
-        "http://localhost:5000/api/notifications/cleanup",
+        "http://localhost:5001/api/notifications/cleanup",
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(response.data.message);
+      toast.success(response.data.message || "Notifications cleaned up successfully");
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message || "Failed to cleanup notifications"
@@ -428,21 +438,26 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="mb-6 flex items-center text-primary-600 hover:text-primary-800 transition-colors font-medium group"
+        >
+          <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          Back
+        </button>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            Manage users, content, and platform communications
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">Manage users, content, and platform communications</p>
         </div>
-
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-white rounded-lg p-1 mb-8 shadow-sm">
+        <div className="flex space-x-1 bg-white rounded-lg p-1 mb-8 shadow-md border border-gray-200">
           <button
             onClick={() => setActiveTab("project")}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-300 ${
               activeTab === "project"
-                ? "bg-primary text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-primary text-white shadow"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             <BarChart3 className="inline-block w-4 h-4 mr-2" />
@@ -450,10 +465,10 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab("users")}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-300 ${
               activeTab === "users"
-                ? "bg-primary text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-primary text-white shadow"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             <Users className="inline-block w-4 h-4 mr-2" />
@@ -461,96 +476,72 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab("messages")}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-300 ${
               activeTab === "messages"
-                ? "bg-primary text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-primary text-white shadow"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             <Globe className="inline-block w-4 h-4 mr-2" />
             Global Messages
           </button>
         </div>
-
         {/* Project Dashboard Tab */}
         {activeTab === "project" && stats && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Users className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Total Users
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.totalUsers}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {stats.activeUsers} active, {stats.bannedUsers} banned
-                    </p>
+                    <p className="text-sm font-medium text-gray-600">Total Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                    <p className="text-xs text-gray-500">{stats.activeUsers} active, {stats.bannedUsers} banned</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="flex items-center">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <MessageSquare className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Total Questions
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.totalQuestions}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {stats.recentQuestions} this week
-                    </p>
+                    <p className="text-sm font-medium text-gray-600">Total Questions</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalQuestions}</p>
+                    <p className="text-xs text-gray-500">{stats.recentQuestions} this week</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="flex items-center">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <MessageSquare className="w-6 h-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Total Answers
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.totalAnswers}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {stats.recentAnswers} this week
-                    </p>
+                    <p className="text-sm font-medium text-gray-600">Total Answers</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalAnswers}</p>
+                    <p className="text-xs text-gray-500">{stats.recentAnswers} this week</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="flex items-center">
                   <div className="p-2 bg-red-100 rounded-lg">
                     <Crown className="w-6 h-6 text-red-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Admin Users
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.adminUsers}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Platform administrators
-                    </p>
+                    <p className="text-sm font-medium text-gray-600">Admin Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.adminUsers}</p>
+                    <p className="text-xs text-gray-500">Platform administrators</p>
                   </div>
                 </div>
               </div>
             </div>
-
+            {/* Section Divider */}
+            <hr className="my-8 border-gray-200" />
             {/* Admin Actions */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -668,92 +659,110 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
-                      <tr key={user._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.username}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {user.email}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              Joined{" "}
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            value={user.role}
-                            onChange={(e) =>
-                              handleRoleChange(user._id, e.target.value)
-                            }
-                            className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                          >
-                            <option value="guest">Guest</option>
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {user.isBanned ? (
+                    {filteredUsers && filteredUsers.length > 0 ? (
+                      filteredUsers.map((user) => (
+                        <tr key={user._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div>
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                Banned
-                              </span>
-                              {user.banReason && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {user.banReason}
-                                </div>
-                              )}
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.username || "Unknown User"}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {user.email || "No email"}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                Joined{" "}
+                                {user.createdAt ? 
+                                  new Date(user.createdAt).toLocaleDateString() : 
+                                  "Unknown date"
+                                }
+                              </div>
                             </div>
-                          ) : (
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                              Active
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div>{user.questionCount} questions</div>
-                          <div>{user.answerCount} answers</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => handleViewUserDetails(user)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {user.isBanned ? (
-                            <button
-                              onClick={() => handleUnbanUser(user._id)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Unban User"
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <select
+                              value={user.role || "user"}
+                              onChange={(e) =>
+                                handleRoleChange(user._id, e.target.value)
+                              }
+                              className="text-sm border border-gray-300 rounded-md px-2 py-1"
                             >
-                              <Unlock className="w-4 h-4" />
-                            </button>
-                          ) : (
+                              <option value="guest">Guest</option>
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {user.isBanned ? (
+                              <div>
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                  Banned
+                                </span>
+                                {user.banReason && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {user.banReason}
+                                  </div>
+                                )}
+                                {user.bannedAt && (
+                                  <div className="text-xs text-gray-400">
+                                    {new Date(user.bannedAt).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div>{user.questionCount || 0} questions</div>
+                            <div>{user.answerCount || 0} answers</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                             <button
-                              onClick={() => handleBanUser(user)}
-                              className="text-orange-600 hover:text-orange-900"
-                              title="Ban User"
+                              onClick={() => handleViewUserDetails(user)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Details"
                             >
-                              <Ban className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteUser(user._id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            {user.isBanned ? (
+                              <button
+                                onClick={() => handleUnbanUser(user._id)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Unban User"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleBanUser(user)}
+                                className="text-orange-600 hover:text-orange-900"
+                                title="Ban User"
+                              >
+                                <Ban className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                          <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-lg font-medium">No users found</p>
+                          <p className="text-sm">Try adjusting your search or filter criteria.</p>
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -800,60 +809,77 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {globalMessages.map((message) => (
-                      <tr key={message._id}>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {message.title}
-                          </div>
-                          <div className="text-sm text-gray-500 line-clamp-2">
-                            {message.message}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {message.author.username}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              message.priority === "urgent"
-                                ? "bg-red-100 text-red-800"
-                                : message.priority === "high"
-                                ? "bg-orange-100 text-orange-800"
-                                : message.priority === "medium"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {message.priority}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {message.targetAudience}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              message.isActive
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {message.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() =>
-                              handleDeleteGlobalMessage(message._id)
-                            }
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                    {globalMessages && globalMessages.length > 0 ? (
+                      globalMessages.map((message) => (
+                        <tr key={message._id}>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {message.title || "Untitled Message"}
+                            </div>
+                            <div className="text-sm text-gray-500 line-clamp-2">
+                              {message.message || "No content"}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {message.createdAt ? 
+                                new Date(message.createdAt).toLocaleDateString() : 
+                                "Unknown date"
+                              }
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {message.author?.username || "Unknown Author"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                message.priority === "urgent"
+                                  ? "bg-red-100 text-red-800"
+                                  : message.priority === "high"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : message.priority === "medium"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {message.priority || "medium"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {message.targetAudience || "all"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                message.isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {message.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() =>
+                                handleDeleteGlobalMessage(message._id)
+                              }
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete Message"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                          <Globe className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                          <p className="text-lg font-medium">No global messages</p>
+                          <p className="text-sm">Send your first global message to get started.</p>
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -873,6 +899,8 @@ export default function AdminDashboard() {
                   onClick={() => {
                     setShowUserDetails(false);
                     setSelectedUser(null);
+                    setUserQuestions([]);
+                    setUserAnswers([]);
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -884,69 +912,87 @@ export default function AdminDashboard() {
                 {/* User Questions */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">
-                    Questions ({userQuestions.length})
+                    Questions ({userQuestions?.length || 0})
                   </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {userQuestions.map((question) => (
-                      <div
-                        key={question._id}
-                        className="p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {question.title}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(
-                                question.createdAt
-                              ).toLocaleDateString()}
-                            </p>
+                    {userQuestions && userQuestions.length > 0 ? (
+                      userQuestions.map((question) => (
+                        <div
+                          key={question._id}
+                          className="p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {question.title || "Untitled Question"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {question.createdAt ? 
+                                  new Date(question.createdAt).toLocaleDateString() : 
+                                  "Unknown date"
+                                }
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteQuestion(question._id)}
+                              className="text-red-600 hover:text-red-900 ml-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleDeleteQuestion(question._id)}
-                            className="text-red-600 hover:text-red-900 ml-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">
+                        <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">No questions found</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
                 {/* User Answers */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">
-                    Answers ({userAnswers.length})
+                    Answers ({userAnswers?.length || 0})
                   </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {userAnswers.map((answer) => (
-                      <div
-                        key={answer._id}
-                        className="p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {answer.question.title}
-                            </p>
-                            <p className="text-xs text-gray-500 line-clamp-2">
-                              {answer.content}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(answer.createdAt).toLocaleDateString()}
-                            </p>
+                    {userAnswers && userAnswers.length > 0 ? (
+                      userAnswers.map((answer) => (
+                        <div
+                          key={answer._id}
+                          className="p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {answer.question?.title || "Question not found"}
+                              </p>
+                              <p className="text-xs text-gray-500 line-clamp-2">
+                                {answer.content || "No content"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {answer.createdAt ? 
+                                  new Date(answer.createdAt).toLocaleDateString() : 
+                                  "Unknown date"
+                                }
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteAnswer(answer._id)}
+                              className="text-red-600 hover:text-red-900 ml-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleDeleteAnswer(answer._id)}
-                            className="text-red-600 hover:text-red-900 ml-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">
+                        <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">No answers found</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>

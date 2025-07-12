@@ -167,7 +167,7 @@ router.post("/", auth, async (req, res) => {
         const imageUrls = [];
         if (req.files && req.files.length > 0) {
           req.files.forEach((file) => {
-            imageUrls.push(`http://localhost:5000/uploads/${file.filename}`);
+            imageUrls.push(`http://localhost:5001/uploads/${file.filename}`);
           });
         }
 
