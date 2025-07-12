@@ -11,6 +11,7 @@ import { ArrowLeft, ThumbsUp, ThumbsDown, Check, Home, UserCircle, LogOut, Edit,
 import Link from "next/link"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { TagInput } from "@/components/tag-input"
 
 interface User {
   _id: string
@@ -66,7 +67,7 @@ export default function QuestionPage() {
   const [editingAnswer, setEditingAnswer] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
-  const [editTags, setEditTags] = useState("")
+  const [editTags, setEditTags] = useState<string[]>([])
   const [editAnswerContent, setEditAnswerContent] = useState("")
   const params = useParams()
   const router = useRouter()
@@ -80,9 +81,14 @@ export default function QuestionPage() {
     if (socket) {
       socket.on("new-answer", (answer: Answer) => {
         if (question && answer.question === question._id) {
+          // Ensure the answer has the required author data
+          const answerWithAuthor = {
+            ...answer,
+            author: answer.author || { _id: "", username: "Unknown", avatar: "" }
+          }
           setQuestion(prev => prev ? {
             ...prev,
-            answers: [...prev.answers, answer]
+            answers: [...prev.answers, answerWithAuthor]
           } : null)
           toast.success("New answer posted!")
         }
@@ -118,7 +124,18 @@ export default function QuestionPage() {
     try {
       setLoading(true)
       const response = await axios.get(`http://localhost:5000/api/questions/${params.id}`)
-      setQuestion(response.data.question)
+      const questionData = response.data.question
+      
+      // Ensure all answers have proper author data
+      const answersWithAuthors = questionData.answers.map((answer: any) => ({
+        ...answer,
+        author: answer.author || { _id: "", username: "Unknown", avatar: "" }
+      }))
+      
+      setQuestion({
+        ...questionData,
+        answers: answersWithAuthors
+      })
     } catch (error) {
       toast.error("Failed to fetch question")
     } finally {
@@ -148,9 +165,13 @@ export default function QuestionPage() {
       setAnswerContent("")
       toast.success("Answer posted successfully!")
       if (question) {
+        const answerWithAuthor = {
+          ...response.data.answer,
+          author: response.data.answer.author || { _id: "", username: "Unknown", avatar: "" }
+        }
         setQuestion({
           ...question,
-          answers: [...question.answers, response.data.answer]
+          answers: [...question.answers, answerWithAuthor]
         })
       }
     } catch (error) {
@@ -180,7 +201,10 @@ export default function QuestionPage() {
         setQuestion(prev => prev ? {
           ...prev,
           answers: prev.answers.map(answer => 
-            answer._id === itemId ? response.data.answer : answer
+            answer._id === itemId ? {
+              ...response.data.answer,
+              author: response.data.answer.author || { _id: "", username: "Unknown", avatar: "" }
+            } : answer
           )
         } : null)
       }
@@ -193,7 +217,7 @@ export default function QuestionPage() {
     if (!question) return
     setEditTitle(question.title)
     setEditDescription(question.description)
-    setEditTags(question.tags.join(", "))
+    setEditTags(question.tags)
     setEditingQuestion(true)
   }
 
@@ -201,14 +225,15 @@ export default function QuestionPage() {
     if (!question) return
     try {
       const token = localStorage.getItem("token")
-      const tagArray = editTags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0)
-      const response = await axios.put(`http://localhost:5000/api/questions/${question._id}`, {
-        title: editTitle,
-        description: editDescription,
-        tags: tagArray,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await axios.put(`http://localhost:5000/api/questions/${question._id}`,
+        {
+          title: editTitle,
+          description: editDescription,
+          tags: editTags,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        })
       setQuestion(response.data.question)
       setEditingQuestion(false)
       toast.success("Question updated successfully!")
@@ -249,7 +274,10 @@ export default function QuestionPage() {
         setQuestion(prev => prev ? {
           ...prev,
           answers: prev.answers.map(answer => 
-            answer._id === answerId ? response.data.answer : answer
+            answer._id === answerId ? {
+              ...response.data.answer,
+              author: response.data.answer.author || { _id: "", username: "Unknown", avatar: "" }
+            } : answer
           )
         } : null)
       }
@@ -395,7 +423,7 @@ export default function QuestionPage() {
                     question.title
                   )}
                 </h1>
-                {user && question.author._id === user._id && !editingQuestion && (
+                {user && question.author?._id === user._id && !editingQuestion && (
                   <div className="flex gap-2">
                     <button
                       onClick={handleEditQuestion}
@@ -420,12 +448,11 @@ export default function QuestionPage() {
                     onChange={setEditDescription}
                     placeholder="Edit your question description..."
                   />
-                  <input
-                    type="text"
+                  <TagInput
                     value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                    placeholder="Tags (comma separated)"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    onChange={setEditTags}
+                    placeholder="Tags (up to 5)"
+                    maxTags={5}
                   />
                   <div className="flex gap-2">
                     <Button onClick={handleSaveQuestion}>Save</Button>
@@ -456,7 +483,7 @@ export default function QuestionPage() {
                   <span>{question.answers.length} answers</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span>asked by {question.author.username}</span>
+                  <span>asked by {question.author?.username || "Unknown"}</span>
                   <span>{formatTimeAgo(question.createdAt)}</span>
                 </div>
               </div>
@@ -515,10 +542,10 @@ export default function QuestionPage() {
                       </div>
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <div className="flex items-center space-x-2">
-                          <span>answered by {answer.author.username}</span>
+                          <span>answered by {answer.author?.username || "Unknown"}</span>
                           <span>{formatTimeAgo(answer.createdAt)}</span>
                         </div>
-                        {user && answer.author._id === user._id && (
+                        {user && answer.author?._id === user._id && (
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEditAnswer(answer._id, answer.content)}

@@ -1,7 +1,11 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import * as React from "react"
+import "react-quill/dist/quill.snow.css"
 import { cn } from "@/lib/utils"
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
 
 interface RichTextEditorProps {
   value: string
@@ -10,15 +14,30 @@ interface RichTextEditorProps {
   className?: string
 }
 
+const toolbarOptions = [
+  [{ 'header': [1, 2, 3, false] }],
+  ['bold', 'italic', 'strike'],
+  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+  ['link', 'image'],
+  [{ 'align': [] }],
+  ['emoji'],
+  ['clean']
+]
+
 export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
   return (
     <div className={cn("relative", className)}>
-      <textarea
+      <ReactQuill
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder={placeholder}
-        className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-        rows={10}
+        modules={{
+          toolbar: toolbarOptions,
+        }}
+        formats={[
+          'header', 'bold', 'italic', 'strike', 'list', 'bullet', 'link', 'image', 'align', 'emoji', 'clean'
+        ]}
+        className="min-h-[200px]"
       />
     </div>
   )

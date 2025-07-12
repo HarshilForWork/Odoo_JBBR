@@ -2,6 +2,7 @@ const express = require("express")
 const Answer = require("../models/Answer")
 const Question = require("../models/Question")
 const auth = require("../middleware/auth")
+const { createAnswerNotification, createVoteNotification, createAcceptNotification } = require("../utils/notifications")
 const router = express.Router()
 
 // Get answers for a question
@@ -33,9 +34,19 @@ router.post("/", auth, async (req, res) => {
     await answer.populate("author", "username avatar")
 
     // Add answer to question
-    await Question.findByIdAndUpdate(questionId, {
+    const question = await Question.findByIdAndUpdate(questionId, {
       $push: { answers: answer._id },
     })
+
+    // Create notification for question author
+    if (question) {
+      await createAnswerNotification(
+        question.author,
+        authorId,
+        questionId,
+        question.title
+      )
+    }
 
     res.status(201).json({ answer })
   } catch (error) {
@@ -139,6 +150,19 @@ router.post("/:id/vote", auth, async (req, res) => {
     await answer.save()
     await answer.populate("author", "username avatar")
 
+    // Create vote notification
+    const question = await Question.findById(answer.question)
+    if (question) {
+      await createVoteNotification(
+        answer.author,
+        userId,
+        "answer",
+        answer._id,
+        answer.question,
+        question.title
+      )
+    }
+
     res.json({ answer })
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message })
@@ -146,7 +170,7 @@ router.post("/:id/vote", auth, async (req, res) => {
 })
 
 // Mark answer as accepted
-router.post("/:id/accept", async (req, res) => {
+router.post("/:id/accept", auth, async (req, res) => {
   try {
     const answer = await Answer.findById(req.params.id)
 
@@ -154,14 +178,22 @@ router.post("/:id/accept", async (req, res) => {
       return res.status(404).json({ message: "Answer not found" })
     }
 
-    // Check if user is question author (for demo, allow all accepts)
-    // const question = await Question.findById(answer.question)
-    // if (question.author.toString() !== req.user.id) {
-    //   return res.status(403).json({ message: "Not authorized" })
-    // }
+    // Check if user is question author
+    const question = await Question.findById(answer.question)
+    if (!question || question.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" })
+    }
 
     answer.isAccepted = true
     await answer.save()
+
+    // Create accept notification
+    await createAcceptNotification(
+      answer.author,
+      question.author,
+      question._id,
+      question.title
+    )
 
     res.json({ answer })
   } catch (error) {

@@ -9,6 +9,7 @@ import { Bell, Home, UserCircle, LogOut } from "lucide-react"
 import Link from "next/link"
 import axios from "axios"
 import toast from "react-hot-toast"
+import { TagInput } from "@/components/tag-input"
 
 interface User {
   _id: string
@@ -20,7 +21,7 @@ interface User {
 export default function AskPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [tags, setTags] = useState("")
+  const [tags, setTags] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -54,15 +55,11 @@ export default function AskPage() {
     }
     try {
       setLoading(true)
-      const tagArray = tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0)
       const token = localStorage.getItem("token")
       const response = await axios.post("http://localhost:5000/api/questions", {
         title: title.trim(),
         description,
-        tags: tagArray,
+        tags,
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -169,15 +166,14 @@ export default function AskPage() {
               <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
                 Tags
               </label>
-              <Input
-                id="tags"
-                type="text"
-                placeholder="e.g., javascript, react, nodejs"
+              <TagInput
                 value={tags}
-                onChange={(e) => setTags(e.target.value)}
+                onChange={setTags}
+                placeholder="e.g., React, JWT, MongoDB"
+                maxTags={5}
               />
               <p className="text-sm text-gray-500 mt-1">
-                Add up to 5 tags separated by commas
+                Add up to 5 tags
               </p>
             </div>
             {/* Submit Button */}
