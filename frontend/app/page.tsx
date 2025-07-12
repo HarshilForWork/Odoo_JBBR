@@ -138,9 +138,9 @@ export default function HomePage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
-            <Link href="/" className="text-2xl font-bold text-primary-600">
-              StackIt
-            </Link>
+              <Link href="/" className="text-2xl font-bold text-primary-600">
+                StackIt
+              </Link>
             <div className="flex items-center space-x-4">
               {user && (
                 <div className="relative">
@@ -194,11 +194,11 @@ export default function HomePage() {
                   )}
                 </div>
               ) : (
-                <Link href="/auth/login">
-                  <Button variant="outline" size="sm">
-                    Login
-                  </Button>
-                </Link>
+              <Link href="/auth/login">
+                <Button variant="outline" size="sm">
+                  Login
+                </Button>
+              </Link>
               )}
               <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setShowMobileFilters((v) => !v)}>
                 <Menu className="h-5 w-5" />
@@ -232,18 +232,18 @@ export default function HomePage() {
             ))}
           </div>
           <form onSubmit={handleSearch} className="flex-1 flex gap-2 justify-end">
-            <Input
-              type="text"
+                  <Input
+                    type="text"
               placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xs"
-            />
+                  />
             <Button type="submit" variant="outline" size="icon">
               <Search className="h-5 w-5" />
             </Button>
           </form>
-        </div>
+                </div>
 
         {/* Filter Bar (Mobile) */}
         {showMobileFilters && (
@@ -258,7 +258,7 @@ export default function HomePage() {
               />
               <Button type="submit" variant="outline" size="icon">
                 <Search className="h-5 w-5" />
-              </Button>
+                  </Button>
             </form>
             <div className="flex flex-col gap-2">
               {filterOptions.map((opt) => (
@@ -268,7 +268,7 @@ export default function HomePage() {
                   size="sm"
                   onClick={() => setSortBy(opt.value)}
                   className="capitalize w-full"
-                >
+                  >
                   {opt.label}
                   {opt.value === "more" && <ChevronDown className="ml-1 h-4 w-4" />}
                 </Button>
@@ -283,13 +283,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Questions List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="text-center py-8">Loading questions...</div>
-          ) : questions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No questions found. Be the first to ask!</div>
-          ) : (
+            {/* Questions List */}
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">Loading questions...</div>
+              ) : questions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No questions found. Be the first to ask!</div>
+              ) : (
             questions.map((question) => {
               if (!question || !question.author) {
                 return (
@@ -306,32 +306,32 @@ export default function HomePage() {
                 <div
                   key={question._id}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center hover:shadow-md transition-shadow"
-                >
+                  >
                   <div className="flex flex-row md:flex-col items-center md:items-start md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
                     <div className="text-center text-xs text-gray-500">
                       <span className="block font-bold text-lg text-primary-600">{question.answers ? question.answers.length : 0}</span>
                       <span>ans</span>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <Link href={`/questions/${question._id}`}>
+                      <div className="flex-1">
+                        <Link href={`/questions/${question._id}`}>
                       <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 cursor-pointer mb-1">
                         {question.title || "Untitled Question"}
-                      </h3>
-                    </Link>
+                          </h3>
+                        </Link>
                     <div className="text-gray-600 mb-2 line-clamp-2 text-sm">
                       <div dangerouslySetInnerHTML={{ __html: question.description && question.description.length > 200 ? question.description.substring(0, 200) + "..." : question.description || "" }} />
-                    </div>
+                        </div>
                     <div className="flex flex-wrap gap-2 mb-2">
                       {question.tags && question.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>by {question.author?.username || "Unknown"}</span>
                       <span>{question.createdAt ? formatTimeAgo(question.createdAt) : "Unknown time"}</span>
@@ -340,26 +340,26 @@ export default function HomePage() {
                 </div>
               )
             })
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center mt-8">
-            <div className="flex space-x-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
+              )}
             </div>
-          </div>
-        )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8">
+                <div className="flex space-x-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
         {/* Auth Modal */}
         {showAuthModal && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
