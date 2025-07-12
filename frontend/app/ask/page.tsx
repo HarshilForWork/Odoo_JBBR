@@ -1,76 +1,81 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { RichTextEditor } from "@/components/rich-text-editor"
-import { Bell, Home, UserCircle, LogOut } from "lucide-react"
-import Link from "next/link"
-import axios from "axios"
-import toast from "react-hot-toast"
-import { TagInput } from "@/components/tag-input"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { Bell, Home, UserCircle, LogOut } from "lucide-react";
+import Link from "next/link";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { TagInput } from "@/components/tag-input";
 
 interface User {
-  _id: string
-  username: string
-  email: string
-  avatar?: string
+  _id: string;
+  username: string;
+  email: string;
+  avatar?: string;
 }
 
 export default function AskPage() {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [tags, setTags] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const router = useRouter()
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem("token");
     if (token) {
-      axios.get("http://localhost:5000/api/auth/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => setUser(res.data.user))
-        .catch(() => setUser(null))
+      axios
+        .get("http://localhost:5000/api/auth/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setUser(res.data.user))
+        .catch(() => setUser(null));
     } else {
-      setUser(null)
+      setUser(null);
     }
-  }, [])
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    setUser(null)
-    toast.success("Logged out!")
-    window.location.reload()
-  }
+    localStorage.removeItem("token");
+    setUser(null);
+    toast.success("Logged out!");
+    window.location.reload();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!title.trim() || !description.trim()) {
-      toast.error("Please fill in all required fields")
-      return
+      toast.error("Please fill in all required fields");
+      return;
     }
     try {
-      setLoading(true)
-      const token = localStorage.getItem("token")
-      const response = await axios.post("http://localhost:5000/api/questions", {
-        title: title.trim(),
-        description,
-        tags,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      toast.success("Question posted successfully!")
-      router.push(`/questions/${response.data.question._id}`)
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        "http://localhost:5000/api/questions",
+        {
+          title: title.trim(),
+          description,
+          tags,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Question posted successfully!");
+      router.push(`/questions/${response.data.question._id}`);
     } catch (error) {
-      toast.error("Failed to post question")
+      toast.error("Failed to post question");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,7 +102,11 @@ export default function AskPage() {
                     onClick={() => setShowProfileMenu((v) => !v)}
                   >
                     {user.avatar ? (
-                      <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+                      <img
+                        src={user.avatar}
+                        alt="avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
                     ) : (
                       <UserCircle className="h-6 w-6 text-gray-400" />
                     )}
@@ -105,8 +114,12 @@ export default function AskPage() {
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                       <div className="px-4 py-3 border-b border-gray-100">
-                        <div className="font-semibold text-gray-900">{user.username}</div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
+                        <div className="font-semibold text-gray-900">
+                          {user.username}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {user.email}
+                        </div>
                       </div>
                       <button
                         className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -130,11 +143,16 @@ export default function AskPage() {
       </header>
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Ask a Question</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            Ask a Question
+          </h1>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="title"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Title *
               </label>
               <Input
@@ -152,7 +170,10 @@ export default function AskPage() {
             </div>
             {/* Description */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Description *
               </label>
               <RichTextEditor
@@ -163,7 +184,10 @@ export default function AskPage() {
             </div>
             {/* Tags */}
             <div>
-              <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="tags"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Tags
               </label>
               <TagInput
@@ -172,9 +196,7 @@ export default function AskPage() {
                 placeholder="e.g., React, JWT, MongoDB"
                 maxTags={5}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Add up to 5 tags
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Add up to 5 tags</p>
             </div>
             {/* Submit Button */}
             <div className="flex justify-end">
@@ -186,5 +208,5 @@ export default function AskPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

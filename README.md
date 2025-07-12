@@ -14,6 +14,7 @@ A modern Q&A forum built with Next.js, Express.js, MongoDB, and Socket.IO for re
 ## Tech Stack
 
 ### Frontend
+
 - **Next.js 14** - React framework with App Router
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Utility-first CSS framework
@@ -22,6 +23,7 @@ A modern Q&A forum built with Next.js, Express.js, MongoDB, and Socket.IO for re
 - **React Hot Toast** - Toast notifications
 
 ### Backend
+
 - **Express.js** - Node.js web framework
 - **MongoDB** - NoSQL database
 - **Mongoose** - MongoDB object modeling
@@ -125,11 +127,13 @@ The frontend will run on `http://localhost:3000`
 ## API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/profile` - Get user profile
 
 ### Questions
+
 - `GET /api/questions` - Get all questions (with pagination and filtering)
 - `GET /api/questions/:id` - Get single question
 - `POST /api/questions` - Create new question
@@ -138,6 +142,7 @@ The frontend will run on `http://localhost:3000`
 - `POST /api/questions/:id/vote` - Vote on question
 
 ### Answers
+
 - `GET /api/answers/question/:questionId` - Get answers for a question
 - `POST /api/answers` - Create new answer
 - `PUT /api/answers/:id` - Update answer
@@ -178,4 +183,4 @@ This project is licensed under the MIT License.
 
 ## Support
 
-If you encounter any issues or have questions, please open an issue on GitHub. 
+If you encounter any issues or have questions, please open an issue on GitHub.

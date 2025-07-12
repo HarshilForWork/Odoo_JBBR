@@ -1,15 +1,15 @@
-const express = require("express")
-const Question = require("../models/Question")
-const auth = require("../middleware/auth")
-const router = express.Router()
+const express = require("express");
+const Question = require("../models/Question");
+const auth = require("../middleware/auth");
+const router = express.Router();
 
 // Get all questions with pagination and filtering
 router.get("/", async (req, res) => {
   try {
-    const { page = 1, limit = 10, sort = "newest", search = "" } = req.query
-    const skip = (page - 1) * limit
+    const { page = 1, limit = 10, sort = "newest", search = "" } = req.query;
+    const skip = (page - 1) * limit;
 
-    let query = {}
+    let query = {};
     if (search) {
       query = {
         $or: [
@@ -17,47 +17,47 @@ router.get("/", async (req, res) => {
           { description: { $regex: search, $options: "i" } },
           { tags: { $in: [new RegExp(search, "i")] } },
         ],
-      }
+      };
     }
 
-    let sortOption = {}
+    let sortOption = {};
     switch (sort) {
       case "newest":
-        sortOption = { createdAt: -1 }
-        break
+        sortOption = { createdAt: -1 };
+        break;
       case "oldest":
-        sortOption = { createdAt: 1 }
-        break
+        sortOption = { createdAt: 1 };
+        break;
       case "votes":
-        sortOption = { votes: -1 }
-        break
+        sortOption = { votes: -1 };
+        break;
       case "unanswered":
-        query.answers = { $size: 0 }
-        sortOption = { createdAt: -1 }
-        break
+        query.answers = { $size: 0 };
+        sortOption = { createdAt: -1 };
+        break;
       default:
-        sortOption = { createdAt: -1 }
+        sortOption = { createdAt: -1 };
     }
 
     const questions = await Question.find(query)
       .populate("author", "username avatar")
       .sort(sortOption)
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(parseInt(limit));
 
-    const total = await Question.countDocuments(query)
-    const totalPages = Math.ceil(total / limit)
+    const total = await Question.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
     res.json({
       questions,
       totalPages,
       currentPage: parseInt(page),
       total,
-    })
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
 // Get single question
 router.get("/:id", async (req, res) => {
@@ -67,142 +67,161 @@ router.get("/:id", async (req, res) => {
       .populate({
         path: "answers",
         populate: { path: "author", select: "username avatar" },
-      })
+      });
 
     if (!question) {
-      return res.status(404).json({ message: "Question not found" })
+      return res.status(404).json({ message: "Question not found" });
     }
 
     // Increment views
-    question.views += 1
-    await question.save()
+    question.views += 1;
+    await question.save();
 
-    res.json({ question })
+    res.json({ question });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
 // Create question
 router.post("/", auth, async (req, res) => {
   try {
-    const { title, description, tags } = req.body
-    const authorId = req.user._id
+    const { title, description, tags } = req.body;
+    const authorId = req.user._id;
 
     const question = new Question({
       title,
       description,
       tags: tags || [],
       author: authorId,
-    })
+    });
 
-    await question.save()
-    await question.populate("author", "username avatar")
+    await question.save();
+    await question.populate("author", "username avatar");
 
-    res.status(201).json({ question })
+    res.status(201).json({ question });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
 // Update question
 router.put("/:id", auth, async (req, res) => {
   try {
-    const { title, description, tags } = req.body
-    const question = await Question.findById(req.params.id)
+    const { title, description, tags } = req.body;
+    const question = await Question.findById(req.params.id);
 
     if (!question) {
-      return res.status(404).json({ message: "Question not found" })
+      return res.status(404).json({ message: "Question not found" });
     }
 
     // Check if user is author
     if (question.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to edit this question" })
+      return res
+        .status(403)
+        .json({ message: "Not authorized to edit this question" });
     }
 
-    question.title = title || question.title
-    question.description = description || question.description
-    question.tags = tags || question.tags
+    question.title = title || question.title;
+    question.description = description || question.description;
+    question.tags = tags || question.tags;
 
-    await question.save()
-    await question.populate("author", "username avatar")
+    await question.save();
+    await question.populate("author", "username avatar");
 
-    res.json({ question })
+    res.json({ question });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
 // Delete question
 router.delete("/:id", auth, async (req, res) => {
   try {
-    const question = await Question.findById(req.params.id)
+    const question = await Question.findById(req.params.id);
 
     if (!question) {
-      return res.status(404).json({ message: "Question not found" })
+      return res.status(404).json({ message: "Question not found" });
     }
 
     // Check if user is author
     if (question.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to delete this question" })
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this question" });
     }
 
-    await Question.findByIdAndDelete(req.params.id)
+    await Question.findByIdAndDelete(req.params.id);
 
-    res.json({ message: "Question deleted successfully" })
+    res.json({ message: "Question deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
 // Vote on question
 router.post("/:id/vote", auth, async (req, res) => {
   try {
-    const { voteType } = req.body // "up" or "down"
-    const question = await Question.findById(req.params.id)
+    const { voteType } = req.body; // "up" or "down"
+    const question = await Question.findById(req.params.id);
 
     if (!question) {
-      return res.status(404).json({ message: "Question not found" })
+      return res.status(404).json({ message: "Question not found" });
     }
 
     // Ensure votes arrays are initialized
-    if (!question.upvotes) question.upvotes = []
-    if (!question.downvotes) question.downvotes = []
+    if (!question.upvotes) question.upvotes = [];
+    if (!question.downvotes) question.downvotes = [];
 
-    const userId = req.user._id
-    const hasUpvoted = question.upvotes.some(id => id.toString() === userId.toString())
-    const hasDownvoted = question.downvotes.some(id => id.toString() === userId.toString())
+    const userId = req.user._id;
+    const hasUpvoted = question.upvotes.some(
+      (id) => id.toString() === userId.toString()
+    );
+    const hasDownvoted = question.downvotes.some(
+      (id) => id.toString() === userId.toString()
+    );
 
     // Remove existing votes
     if (hasUpvoted) {
-      question.upvotes = question.upvotes.filter(id => id.toString() !== userId.toString())
-      question.votes -= 1
+      question.upvotes = question.upvotes.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      question.votes -= 1;
     }
     if (hasDownvoted) {
-      question.downvotes = question.downvotes.filter(id => id.toString() !== userId.toString())
-      question.votes += 1
+      question.downvotes = question.downvotes.filter(
+        (id) => id.toString() !== userId.toString()
+      );
+      question.votes += 1;
     }
 
     // Add new vote
     if (voteType === "up") {
       if (!hasUpvoted) {
-        question.upvotes.push(userId)
-        question.votes += 1
+        question.upvotes.push(userId);
+        question.votes += 1;
       }
     } else if (voteType === "down") {
       if (!hasDownvoted) {
-        question.downvotes.push(userId)
-        question.votes -= 1
+        question.downvotes.push(userId);
+        question.votes -= 1;
       }
     }
 
-    await question.save()
-    await question.populate("author", "username avatar")
+    await question.save();
 
-    res.json({ question })
+    // Return the updated question with populated answers
+    const updatedQuestion = await Question.findById(question._id)
+      .populate("author", "username avatar")
+      .populate({
+        path: "answers",
+        populate: { path: "author", select: "username avatar" },
+      });
+
+    res.json({ question: updatedQuestion });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message })
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-})
+});
 
-module.exports = router 
+module.exports = router;
