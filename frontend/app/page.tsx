@@ -67,7 +67,7 @@ export default function HomePage() {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:5000/api/questions`,
+          `http://localhost:5001/api/questions`,
           {
             params: {
               page: 1,
@@ -143,7 +143,7 @@ export default function HomePage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5000/api/auth/profile", {
+        .get("http://localhost:5001/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -157,7 +157,7 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       axios
-        .get("http://localhost:5000/api/notifications", {
+        .get("http://localhost:5001/api/notifications", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
         .then((res) => {
@@ -170,7 +170,7 @@ export default function HomePage() {
         });
 
       axios
-        .get("http://localhost:5000/api/announcements")
+        .get("http://localhost:5001/api/announcements")
         .then((res) => {
           console.log("Fetched announcements:", res.data.announcements);
           setAnnouncements(res.data.announcements || []);
@@ -198,7 +198,7 @@ export default function HomePage() {
   const markNotificationAsRead = async (notificationId: string) => {
     try {
       await axios.patch(
-        `http://localhost:5000/api/notifications/${notificationId}/read`,
+        `http://localhost:5001/api/notifications/${notificationId}/read`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -215,7 +215,7 @@ export default function HomePage() {
   const markAllAsRead = async () => {
     try {
       await axios.patch(
-        "http://localhost:5000/api/notifications/read-all",
+        "http://localhost:5001/api/notifications/read-all",
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -232,7 +232,7 @@ export default function HomePage() {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/questions`, {
+      const response = await axios.get(`http://localhost:5001/api/questions`, {
         params: {
           page: currentPage,
           sort: sortBy,
@@ -253,10 +253,10 @@ export default function HomePage() {
 
     try {
       const [notificationsRes, announcementsRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/notifications", {
+        axios.get("http://localhost:5001/api/notifications", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }),
-        axios.get("http://localhost:5000/api/announcements"),
+                  axios.get("http://localhost:5001/api/announcements"),
       ]);
 
       setNotifications(notificationsRes.data || []);
@@ -406,7 +406,7 @@ export default function HomePage() {
 
                                   try {
                                     const response = await axios.get(
-                                      `http://localhost:5000/api/questions/${questionId}`
+                                      `http://localhost:5001/api/questions/${questionId}`
                                     );
                                     if (response.data.question) {
                                       router.push(`/questions/${questionId}`);

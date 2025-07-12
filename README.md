@@ -76,7 +76,7 @@ Edit the `.env` file in the backend directory:
 ```env
 MONGODB_URI=mongodb://localhost:27017/stackit
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-PORT=5000
+PORT=5001
 NODE_ENV=development
 ```
 
@@ -102,7 +102,7 @@ sudo systemctl start mongod
 npm run dev
 ```
 
-This will start both the backend (port 5000) and frontend (port 3000) servers concurrently.
+This will start both the backend (port 5001) and frontend (port 3000) servers concurrently.
 
 ## Development
 
@@ -113,7 +113,7 @@ cd backend
 npm run dev
 ```
 
-The backend server will run on `http://localhost:5000`
+The backend server will run on `http://localhost:5001`
 
 ### Frontend Development
 

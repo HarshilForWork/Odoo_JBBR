@@ -68,7 +68,7 @@ if (fs.existsSync(backendEnvExamplePath)) {
   console.log("⚠️  Backend env.example not found, creating basic .env file...");
   const envContent = `MONGODB_URI=mongodb://localhost:27017/stackit
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-PORT=5000
+PORT=5001
 NODE_ENV=development`;
 
   try {
@@ -90,4 +90,4 @@ console.log(
 );
 console.log("\n🌐 The application will be available at:");
 console.log("   Frontend: http://localhost:3000");
-console.log("   Backend:  http://localhost:5000");
+console.log("   Backend:  http://localhost:5001");
