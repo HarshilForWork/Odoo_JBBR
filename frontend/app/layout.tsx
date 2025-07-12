@@ -13,6 +13,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>StackIt - Community Q&A Forum</title>
+        <meta
+          name="description"
+          content="StackIt - A community-driven question and answer forum where users can ask questions, share knowledge, and help each other."
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body>
         <SocketProvider>
           <AnimatePresence mode="wait">

@@ -42,6 +42,7 @@ interface Question {
   answers: any[];
   views: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function HomePage() {
@@ -561,11 +562,16 @@ export default function HomePage() {
                   </AnimatePresence>
                 </div>
               ) : (
-                <Link href="/auth/login">
-                  <Button variant="outline" size="sm">
-                    Login
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <Button size="sm">Sign Up</Button>
+                  </Link>
+                </div>
               )}
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -906,6 +912,12 @@ export default function HomePage() {
                           ? formatTimeAgo(question.createdAt)
                           : "Unknown time"}
                       </span>
+                      {question.updatedAt &&
+                        question.updatedAt !== question.createdAt && (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                            edited
+                          </span>
+                        )}
                     </div>
                   </div>
                 </motion.div>

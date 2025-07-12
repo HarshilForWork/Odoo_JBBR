@@ -53,6 +53,7 @@ export default function RegisterPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Choose a username (3-20 characters)"
               required
               autoFocus
             />
@@ -69,6 +70,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
               required
             />
           </div>
@@ -84,6 +86,7 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password (min 6 characters)"
               required
               minLength={6}
             />

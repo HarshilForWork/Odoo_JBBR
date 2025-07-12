@@ -42,10 +42,22 @@ const answerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Update the updatedAt field when the document is modified
+answerSchema.pre("save", function (next) {
+  if (this.isModified()) {
+    this.updatedAt = new Date();
+  }
+  next();
+});
 
 module.exports = mongoose.model("Answer", answerSchema);

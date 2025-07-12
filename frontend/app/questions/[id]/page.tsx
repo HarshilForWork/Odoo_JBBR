@@ -46,6 +46,7 @@ interface Answer {
   downvotes: string[];
   isAccepted: boolean;
   createdAt: string;
+  updatedAt: string;
   question?: string;
   images?: string[];
 }
@@ -67,6 +68,7 @@ interface Question {
   answers: Answer[];
   views: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function QuestionPage() {
@@ -709,6 +711,12 @@ export default function QuestionPage() {
                 <div className="flex items-center space-x-2">
                   <span>asked by {question.author?.username || "Unknown"}</span>
                   <span>{formatTimeAgo(question.createdAt)}</span>
+                  {question.updatedAt &&
+                    question.updatedAt !== question.createdAt && (
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                        edited
+                      </span>
+                    )}
                 </div>
               </div>
             </div>
@@ -855,6 +863,12 @@ export default function QuestionPage() {
                               answered by {answer.author?.username || "Unknown"}
                             </span>
                             <span>{formatTimeAgo(answer.createdAt)}</span>
+                            {answer.updatedAt &&
+                              answer.updatedAt !== answer.createdAt && (
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                  edited
+                                </span>
+                              )}
                           </div>
                           <div className="flex gap-2">
                             {user && answer.author?._id === user._id && (
