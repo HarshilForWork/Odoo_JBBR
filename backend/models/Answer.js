@@ -20,6 +20,14 @@ const answerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    upvotes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
+    downvotes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
     isAccepted: {
       type: Boolean,
       default: false,

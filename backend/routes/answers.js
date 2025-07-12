@@ -1,6 +1,7 @@
 const express = require("express")
 const Answer = require("../models/Answer")
 const Question = require("../models/Question")
+const auth = require("../middleware/auth")
 const router = express.Router()
 
 // Get answers for a question
@@ -17,10 +18,10 @@ router.get("/question/:questionId", async (req, res) => {
 })
 
 // Create answer
-router.post("/", async (req, res) => {
+router.post("/", auth, async (req, res) => {
   try {
     const { content, questionId } = req.body
-    const authorId = req.user?.id || "64f8b8b8b8b8b8b8b8b8b8b8" // Default user for demo
+    const authorId = req.user._id
 
     const answer = new Answer({
       content,
@@ -43,7 +44,7 @@ router.post("/", async (req, res) => {
 })
 
 // Update answer
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
   try {
     const { content } = req.body
     const answer = await Answer.findById(req.params.id)
@@ -52,10 +53,10 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Answer not found" })
     }
 
-    // Check if user is author (for demo, allow all updates)
-    // if (answer.author.toString() !== req.user.id) {
-    //   return res.status(403).json({ message: "Not authorized" })
-    // }
+    // Check if user is author
+    if (answer.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to edit this answer" })
+    }
 
     answer.content = content
     await answer.save()
@@ -68,7 +69,7 @@ router.put("/:id", async (req, res) => {
 })
 
 // Delete answer
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
     const answer = await Answer.findById(req.params.id)
 
@@ -76,10 +77,10 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Answer not found" })
     }
 
-    // Check if user is author (for demo, allow all deletes)
-    // if (answer.author.toString() !== req.user.id) {
-    //   return res.status(403).json({ message: "Not authorized" })
-    // }
+    // Check if user is author
+    if (answer.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this answer" })
+    }
 
     // Remove answer from question
     await Question.findByIdAndUpdate(answer.question, {
@@ -95,7 +96,7 @@ router.delete("/:id", async (req, res) => {
 })
 
 // Vote on answer
-router.post("/:id/vote", async (req, res) => {
+router.post("/:id/vote", auth, async (req, res) => {
   try {
     const { voteType } = req.body // "up" or "down"
     const answer = await Answer.findById(req.params.id)
@@ -104,13 +105,39 @@ router.post("/:id/vote", async (req, res) => {
       return res.status(404).json({ message: "Answer not found" })
     }
 
-    if (voteType === "up") {
-      answer.votes += 1
-    } else if (voteType === "down") {
+    // Ensure votes arrays are initialized
+    if (!answer.upvotes) answer.upvotes = []
+    if (!answer.downvotes) answer.downvotes = []
+
+    const userId = req.user._id
+    const hasUpvoted = answer.upvotes.some(id => id.toString() === userId.toString())
+    const hasDownvoted = answer.downvotes.some(id => id.toString() === userId.toString())
+
+    // Remove existing votes
+    if (hasUpvoted) {
+      answer.upvotes = answer.upvotes.filter(id => id.toString() !== userId.toString())
       answer.votes -= 1
+    }
+    if (hasDownvoted) {
+      answer.downvotes = answer.downvotes.filter(id => id.toString() !== userId.toString())
+      answer.votes += 1
+    }
+
+    // Add new vote
+    if (voteType === "up") {
+      if (!hasUpvoted) {
+        answer.upvotes.push(userId)
+        answer.votes += 1
+      }
+    } else if (voteType === "down") {
+      if (!hasDownvoted) {
+        answer.downvotes.push(userId)
+        answer.votes -= 1
+      }
     }
 
     await answer.save()
+    await answer.populate("author", "username avatar")
 
     res.json({ answer })
   } catch (error) {

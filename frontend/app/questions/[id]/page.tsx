@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { useSocket } from "@/lib/socket-context"
 import { formatTimeAgo } from "@/lib/utils"
-import { ArrowLeft, ThumbsUp, ThumbsDown, Check, Home, UserCircle, LogOut } from "lucide-react"
+import { ArrowLeft, ThumbsUp, ThumbsDown, Check, Home, UserCircle, LogOut, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import axios from "axios"
 import toast from "react-hot-toast"
 
 interface User {
-  id: string
+  _id: string
   username: string
   email: string
   avatar?: string
@@ -23,12 +23,16 @@ interface Answer {
   _id: string
   content: string
   author: {
+    _id: string
     username: string
     avatar?: string
   }
   votes: number
+  upvotes: string[]
+  downvotes: string[]
   isAccepted: boolean
   createdAt: string
+  question?: string
 }
 
 interface Question {
@@ -37,10 +41,13 @@ interface Question {
   description: string
   tags: string[]
   author: {
+    _id: string
     username: string
     avatar?: string
   }
   votes: number
+  upvotes: string[]
+  downvotes: string[]
   answers: Answer[]
   views: number
   createdAt: string
@@ -55,6 +62,12 @@ export default function QuestionPage() {
   const [user, setUser] = useState<User | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [editingQuestion, setEditingQuestion] = useState(false)
+  const [editingAnswer, setEditingAnswer] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editTags, setEditTags] = useState("")
+  const [editAnswerContent, setEditAnswerContent] = useState("")
   const params = useParams()
   const router = useRouter()
   const { socket } = useSocket()
@@ -125,9 +138,12 @@ export default function QuestionPage() {
     }
     try {
       setSubmitting(true)
+      const token = localStorage.getItem("token")
       const response = await axios.post("http://localhost:5000/api/answers", {
         content: answerContent,
         questionId: params.id,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       })
       setAnswerContent("")
       toast.success("Answer posted successfully!")
@@ -150,27 +166,117 @@ export default function QuestionPage() {
       return
     }
     try {
+      const token = localStorage.getItem("token")
       const endpoint = itemType === "question" 
         ? `http://localhost:5000/api/questions/${itemId}/vote`
         : `http://localhost:5000/api/answers/${itemId}/vote`
-      await axios.post(endpoint, { voteType: type })
+      const response = await axios.post(endpoint, { voteType: type }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
       if (itemType === "question" && question) {
-        setQuestion(prev => prev ? {
-          ...prev,
-          votes: prev.votes + (type === "up" ? 1 : -1)
-        } : null)
+        setQuestion(response.data.question)
       } else if (itemType === "answer" && question) {
         setQuestion(prev => prev ? {
           ...prev,
           answers: prev.answers.map(answer => 
-            answer._id === itemId 
-              ? { ...answer, votes: answer.votes + (type === "up" ? 1 : -1) }
-              : answer
+            answer._id === itemId ? response.data.answer : answer
           )
         } : null)
       }
     } catch (error) {
       toast.error("Failed to vote")
+    }
+  }
+
+  const handleEditQuestion = () => {
+    if (!question) return
+    setEditTitle(question.title)
+    setEditDescription(question.description)
+    setEditTags(question.tags.join(", "))
+    setEditingQuestion(true)
+  }
+
+  const handleSaveQuestion = async () => {
+    if (!question) return
+    try {
+      const token = localStorage.getItem("token")
+      const tagArray = editTags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0)
+      const response = await axios.put(`http://localhost:5000/api/questions/${question._id}`, {
+        title: editTitle,
+        description: editDescription,
+        tags: tagArray,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setQuestion(response.data.question)
+      setEditingQuestion(false)
+      toast.success("Question updated successfully!")
+    } catch (error) {
+      toast.error("Failed to update question")
+    }
+  }
+
+  const handleDeleteQuestion = async () => {
+    if (!question) return
+    if (!confirm("Are you sure you want to delete this question?")) return
+    try {
+      const token = localStorage.getItem("token")
+      await axios.delete(`http://localhost:5000/api/questions/${question._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success("Question deleted successfully!")
+      router.push("/")
+    } catch (error) {
+      toast.error("Failed to delete question")
+    }
+  }
+
+  const handleEditAnswer = (answerId: string, content: string) => {
+    setEditingAnswer(answerId)
+    setEditAnswerContent(content)
+  }
+
+  const handleSaveAnswer = async (answerId: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axios.put(`http://localhost:5000/api/answers/${answerId}`, {
+        content: editAnswerContent,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (question) {
+        setQuestion(prev => prev ? {
+          ...prev,
+          answers: prev.answers.map(answer => 
+            answer._id === answerId ? response.data.answer : answer
+          )
+        } : null)
+      }
+      setEditingAnswer(null)
+      setEditAnswerContent("")
+      toast.success("Answer updated successfully!")
+    } catch (error) {
+      toast.error("Failed to update answer")
+    }
+  }
+
+  const handleDeleteAnswer = async (answerId: string) => {
+    if (!confirm("Are you sure you want to delete this answer?")) return
+    try {
+      const token = localStorage.getItem("token")
+      await axios.delete(`http://localhost:5000/api/answers/${answerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (question) {
+        setQuestion(prev => prev ? {
+          ...prev,
+          answers: prev.answers.filter(answer => answer._id !== answerId)
+        } : null)
+      }
+      toast.success("Answer deleted successfully!")
+    } catch (error) {
+      toast.error("Failed to delete answer")
     }
   }
 
@@ -258,34 +364,92 @@ export default function QuestionPage() {
             <div className="flex flex-col items-center space-y-2">
               <button
                 onClick={() => handleVote("up", question._id, "question")}
-                className="p-1 hover:bg-gray-100 rounded"
+                className={`p-1 hover:bg-gray-100 rounded ${
+                  user?._id && question.upvotes && question.upvotes.some(id => id === user._id) ? "text-blue-500" : "text-gray-400"
+                }`}
               >
-                <ThumbsUp className="h-5 w-5 text-gray-400" />
+                <ThumbsUp className="h-5 w-5" />
               </button>
               <span className="text-lg font-semibold">{question.votes}</span>
               <button
                 onClick={() => handleVote("down", question._id, "question")}
-                className="p-1 hover:bg-gray-100 rounded"
+                className={`p-1 hover:bg-gray-100 rounded ${
+                  user?._id && question.downvotes && question.downvotes.some(id => id === user._id) ? "text-red-500" : "text-gray-400"
+                }`}
               >
-                <ThumbsDown className="h-5 w-5 text-gray-400" />
+                <ThumbsDown className="h-5 w-5" />
               </button>
             </div>
             {/* Question Content */}
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">{question.title}</h1>
-              <div className="prose max-w-none mb-4">
-                <div dangerouslySetInnerHTML={{ __html: question.description }} />
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {editingQuestion ? (
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full text-2xl font-bold text-gray-900 border border-gray-300 rounded px-2 py-1"
+                    />
+                  ) : (
+                    question.title
+                  )}
+                </h1>
+                {user && question.author._id === user._id && !editingQuestion && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleEditQuestion}
+                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={handleDeleteQuestion}
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {question.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              
+              {editingQuestion ? (
+                <div className="space-y-4 mb-4">
+                  <RichTextEditor
+                    value={editDescription}
+                    onChange={setEditDescription}
+                    placeholder="Edit your question description..."
+                  />
+                  <input
+                    type="text"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    placeholder="Tags (comma separated)"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveQuestion}>Save</Button>
+                    <Button variant="outline" onClick={() => setEditingQuestion(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="prose max-w-none mb-4">
+                    <div dangerouslySetInnerHTML={{ __html: question.description }} />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {question.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <div className="flex items-center space-x-4">
                   <span>{question.views} views</span>
@@ -311,16 +475,20 @@ export default function QuestionPage() {
                 <div className="flex flex-col items-center space-y-2">
                   <button
                     onClick={() => handleVote("up", answer._id, "answer")}
-                    className="p-1 hover:bg-gray-100 rounded"
+                    className={`p-1 hover:bg-gray-100 rounded ${
+                      user?._id && answer.upvotes && answer.upvotes.some(id => id === user._id) ? "text-blue-500" : "text-gray-400"
+                    }`}
                   >
-                    <ThumbsUp className="h-5 w-5 text-gray-400" />
+                    <ThumbsUp className="h-5 w-5" />
                   </button>
                   <span className="text-lg font-semibold">{answer.votes}</span>
                   <button
                     onClick={() => handleVote("down", answer._id, "answer")}
-                    className="p-1 hover:bg-gray-100 rounded"
+                    className={`p-1 hover:bg-gray-100 rounded ${
+                      user?._id && answer.downvotes && answer.downvotes.some(id => id === user._id) ? "text-red-500" : "text-gray-400"
+                    }`}
                   >
-                    <ThumbsDown className="h-5 w-5 text-gray-400" />
+                    <ThumbsDown className="h-5 w-5" />
                   </button>
                   {answer.isAccepted && (
                     <Check className="h-5 w-5 text-green-500" />
@@ -328,15 +496,47 @@ export default function QuestionPage() {
                 </div>
                 {/* Answer Content */}
                 <div className="flex-1">
-                  <div className="prose max-w-none mb-4">
-                    <div dangerouslySetInnerHTML={{ __html: answer.content }} />
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center space-x-2">
-                      <span>answered by {answer.author.username}</span>
-                      <span>{formatTimeAgo(answer.createdAt)}</span>
+                  {editingAnswer === answer._id ? (
+                    <div className="space-y-4 mb-4">
+                      <RichTextEditor
+                        value={editAnswerContent}
+                        onChange={setEditAnswerContent}
+                        placeholder="Edit your answer..."
+                      />
+                      <div className="flex gap-2">
+                        <Button onClick={() => handleSaveAnswer(answer._id)}>Save</Button>
+                        <Button variant="outline" onClick={() => setEditingAnswer(null)}>Cancel</Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="prose max-w-none mb-4">
+                        <div dangerouslySetInnerHTML={{ __html: answer.content }} />
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center space-x-2">
+                          <span>answered by {answer.author.username}</span>
+                          <span>{formatTimeAgo(answer.createdAt)}</span>
+                        </div>
+                        {user && answer.author._id === user._id && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditAnswer(answer._id, answer.content)}
+                              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAnswer(answer._id)}
+                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

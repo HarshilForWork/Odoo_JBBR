@@ -11,7 +11,7 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 interface User {
-  id: string
+  _id: string
   username: string
   email: string
   avatar?: string
@@ -58,10 +58,13 @@ export default function AskPage() {
         .split(",")
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0)
+      const token = localStorage.getItem("token")
       const response = await axios.post("http://localhost:5000/api/questions", {
         title: title.trim(),
         description,
         tags: tagArray,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       })
       toast.success("Question posted successfully!")
       router.push(`/questions/${response.data.question._id}`)

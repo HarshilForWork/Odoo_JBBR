@@ -13,7 +13,7 @@ import toast from "react-hot-toast"
 import { useRouter } from "next/navigation"
 
 interface User {
-  id: string
+  _id: string
   username: string
   email: string
   avatar?: string
@@ -290,43 +290,56 @@ export default function HomePage() {
           ) : questions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">No questions found. Be the first to ask!</div>
           ) : (
-            questions.map((question) => (
-              <div
-                key={question._id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-row md:flex-col items-center md:items-start md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
-                  <div className="text-center text-xs text-gray-500">
-                    <span className="block font-bold text-lg text-primary-600">{question.answers.length}</span>
-                    <span>ans</span>
+            questions.map((question) => {
+              if (!question || !question.author) {
+                return (
+                  <div
+                    key={question?._id || Math.random()}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+                  >
+                    <div className="text-red-500">Error loading question</div>
+                  </div>
+                )
+              }
+              
+              return (
+                <div
+                  key={question._id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center hover:shadow-md transition-shadow"
+                >
+                  <div className="flex flex-row md:flex-col items-center md:items-start md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
+                    <div className="text-center text-xs text-gray-500">
+                      <span className="block font-bold text-lg text-primary-600">{question.answers ? question.answers.length : 0}</span>
+                      <span>ans</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <Link href={`/questions/${question._id}`}>
+                      <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 cursor-pointer mb-1">
+                        {question.title || "Untitled Question"}
+                      </h3>
+                    </Link>
+                    <div className="text-gray-600 mb-2 line-clamp-2 text-sm">
+                      <div dangerouslySetInnerHTML={{ __html: question.description && question.description.length > 200 ? question.description.substring(0, 200) + "..." : question.description || "" }} />
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {question.tags && question.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>by {question.author?.username || "Unknown"}</span>
+                      <span>{question.createdAt ? formatTimeAgo(question.createdAt) : "Unknown time"}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <Link href={`/questions/${question._id}`}>
-                    <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 cursor-pointer mb-1">
-                      {question.title}
-                    </h3>
-                  </Link>
-                  <div className="text-gray-600 mb-2 line-clamp-2 text-sm">
-                    <div dangerouslySetInnerHTML={{ __html: question.description.substring(0, 200) + "..." }} />
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {question.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>by {question.author.username}</span>
-                    <span>{formatTimeAgo(question.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 

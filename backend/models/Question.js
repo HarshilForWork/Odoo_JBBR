@@ -28,6 +28,14 @@ const questionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    upvotes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
+    downvotes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
     answers: [
       {
         type: mongoose.Schema.Types.ObjectId,

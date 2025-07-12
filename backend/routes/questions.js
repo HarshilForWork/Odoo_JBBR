@@ -1,5 +1,6 @@
 const express = require("express")
 const Question = require("../models/Question")
+const auth = require("../middleware/auth")
 const router = express.Router()
 
 // Get all questions with pagination and filtering
@@ -83,10 +84,10 @@ router.get("/:id", async (req, res) => {
 })
 
 // Create question
-router.post("/", async (req, res) => {
+router.post("/", auth, async (req, res) => {
   try {
     const { title, description, tags } = req.body
-    const authorId = req.user?.id || "64f8b8b8b8b8b8b8b8b8b8b8" // Default user for demo
+    const authorId = req.user._id
 
     const question = new Question({
       title,
@@ -105,7 +106,7 @@ router.post("/", async (req, res) => {
 })
 
 // Update question
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
   try {
     const { title, description, tags } = req.body
     const question = await Question.findById(req.params.id)
@@ -114,10 +115,10 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Question not found" })
     }
 
-    // Check if user is author (for demo, allow all updates)
-    // if (question.author.toString() !== req.user.id) {
-    //   return res.status(403).json({ message: "Not authorized" })
-    // }
+    // Check if user is author
+    if (question.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to edit this question" })
+    }
 
     question.title = title || question.title
     question.description = description || question.description
@@ -133,7 +134,7 @@ router.put("/:id", async (req, res) => {
 })
 
 // Delete question
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
     const question = await Question.findById(req.params.id)
 
@@ -141,10 +142,10 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Question not found" })
     }
 
-    // Check if user is author (for demo, allow all deletes)
-    // if (question.author.toString() !== req.user.id) {
-    //   return res.status(403).json({ message: "Not authorized" })
-    // }
+    // Check if user is author
+    if (question.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this question" })
+    }
 
     await Question.findByIdAndDelete(req.params.id)
 
@@ -155,7 +156,7 @@ router.delete("/:id", async (req, res) => {
 })
 
 // Vote on question
-router.post("/:id/vote", async (req, res) => {
+router.post("/:id/vote", auth, async (req, res) => {
   try {
     const { voteType } = req.body // "up" or "down"
     const question = await Question.findById(req.params.id)
@@ -164,13 +165,39 @@ router.post("/:id/vote", async (req, res) => {
       return res.status(404).json({ message: "Question not found" })
     }
 
-    if (voteType === "up") {
-      question.votes += 1
-    } else if (voteType === "down") {
+    // Ensure votes arrays are initialized
+    if (!question.upvotes) question.upvotes = []
+    if (!question.downvotes) question.downvotes = []
+
+    const userId = req.user._id
+    const hasUpvoted = question.upvotes.some(id => id.toString() === userId.toString())
+    const hasDownvoted = question.downvotes.some(id => id.toString() === userId.toString())
+
+    // Remove existing votes
+    if (hasUpvoted) {
+      question.upvotes = question.upvotes.filter(id => id.toString() !== userId.toString())
       question.votes -= 1
+    }
+    if (hasDownvoted) {
+      question.downvotes = question.downvotes.filter(id => id.toString() !== userId.toString())
+      question.votes += 1
+    }
+
+    // Add new vote
+    if (voteType === "up") {
+      if (!hasUpvoted) {
+        question.upvotes.push(userId)
+        question.votes += 1
+      }
+    } else if (voteType === "down") {
+      if (!hasDownvoted) {
+        question.downvotes.push(userId)
+        question.votes -= 1
+      }
     }
 
     await question.save()
+    await question.populate("author", "username avatar")
 
     res.json({ question })
   } catch (error) {
