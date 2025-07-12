@@ -46,7 +46,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
-}
+  }
 }
 
 @layer base {
@@ -55,5 +55,68 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Rich text content styles */
+  .prose h1 {
+    @apply text-2xl font-bold mb-4;
+  }
+
+  .prose h2 {
+    @apply text-xl font-bold mb-3;
+  }
+
+  .prose h3 {
+    @apply text-lg font-bold mb-2;
+  }
+
+  .prose ul {
+    @apply list-disc list-inside mb-4;
+  }
+
+  .prose ol {
+    @apply list-decimal list-inside mb-4;
+  }
+
+  .prose li {
+    @apply mb-1;
+  }
+
+  .prose p {
+    @apply mb-4;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-gray-300 pl-4 italic my-4;
+  }
+
+  .prose code {
+    @apply bg-gray-100 px-1 py-0.5 rounded text-sm;
+  }
+
+  .prose pre {
+    @apply bg-gray-100 p-4 rounded overflow-x-auto;
+  }
+
+  .prose a {
+    @apply text-blue-600 hover:text-blue-800 underline;
+  }
+
+  .prose img {
+    @apply max-w-full h-auto rounded;
+  }
+
+  .prose .ql-align-center {
+    @apply text-center;
+  }
+
+  .prose .ql-align-right {
+    @apply text-right;
+  }
+
+  .prose .ql-align-justify {
+    @apply text-justify;
   }
 }

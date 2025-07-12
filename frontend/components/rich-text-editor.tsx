@@ -1,30 +1,49 @@
-"use client"
+"use client";
 
-import dynamic from "next/dynamic"
-import * as React from "react"
-import "react-quill/dist/quill.snow.css"
-import { cn } from "@/lib/utils"
+import dynamic from "next/dynamic";
+import * as React from "react";
+import "react-quill/dist/quill.snow.css";
+import { cn } from "@/lib/utils";
 
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 interface RichTextEditorProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
 }
 
 const toolbarOptions = [
-  [{ 'header': [1, 2, 3, false] }],
-  ['bold', 'italic', 'strike'],
-  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-  ['link', 'image'],
-  [{ 'align': [] }],
-  ['emoji'],
-  ['clean']
-]
+  [{ header: [1, 2, 3, false] }],
+  ["bold", "italic", "strike"],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["link", "image"],
+  [{ align: [] }],
+  ["emoji"],
+  ["clean"],
+];
 
-export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
+const formats = [
+  "header",
+  "bold",
+  "italic",
+  "strike",
+  "list",
+  "bullet",
+  "link",
+  "image",
+  "align",
+  "emoji",
+  "clean",
+];
+
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: RichTextEditorProps) {
   return (
     <div className={cn("relative", className)}>
       <ReactQuill
@@ -34,11 +53,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         modules={{
           toolbar: toolbarOptions,
         }}
-        formats={[
-          'header', 'bold', 'italic', 'strike', 'list', 'bullet', 'link', 'image', 'align', 'emoji', 'clean'
-        ]}
+        formats={formats}
         className="min-h-[200px]"
+        theme="snow"
       />
     </div>
-  )
+  );
 }
