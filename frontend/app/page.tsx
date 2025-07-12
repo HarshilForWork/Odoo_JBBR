@@ -60,20 +60,25 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showMyPosts, setShowMyPosts] = useState(false);
 
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce(async (search: string) => {
       try {
         setLoading(true);
+        const endpoint = showMyPosts ? "/my-questions" : "";
         const response = await axios.get(
-          `http://localhost:5000/api/questions`,
+          `http://localhost:5000/api/questions${endpoint}`,
           {
             params: {
               page: 1,
               sort: sortBy,
               search: search,
             },
+            headers: showMyPosts
+              ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+              : {},
           }
         );
         setQuestions(response.data.questions);
@@ -85,7 +90,7 @@ export default function HomePage() {
         setLoading(false);
       }
     }, 300),
-    [sortBy]
+    [sortBy, showMyPosts]
   );
 
   // Debounce utility function
@@ -102,7 +107,7 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchQuestions();
-  }, [sortBy, currentPage]);
+  }, [sortBy, currentPage, showMyPosts]);
 
   // Real-time search effect
   useEffect(() => {
@@ -232,13 +237,20 @@ export default function HomePage() {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/questions`, {
-        params: {
-          page: currentPage,
-          sort: sortBy,
-          search: searchTerm,
-        },
-      });
+      const endpoint = showMyPosts ? "/my-questions" : "";
+      const response = await axios.get(
+        `http://localhost:5000/api/questions${endpoint}`,
+        {
+          params: {
+            page: currentPage,
+            sort: sortBy,
+            search: searchTerm,
+          },
+          headers: showMyPosts
+            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            : {},
+        }
+      );
       setQuestions(response.data.questions);
       setTotalPages(response.data.totalPages);
     } catch (error) {
@@ -293,6 +305,13 @@ export default function HomePage() {
                 StackIt
               </Link>
             </motion.div>
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-sm text-primary-600 font-medium bg-primary-50 px-2 py-1 rounded-md"
+            >
+              {showMyPosts ? "My Posts" : "All Posts"}
+            </motion.span>
             <div className="flex items-center space-x-4">
               {user && (
                 <div className="relative">
@@ -634,6 +653,20 @@ export default function HomePage() {
               ? "Send Universal Message"
               : "Ask New Question"}
           </motion.button>
+          {user && user.role !== "admin" && (
+            <motion.button
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition ${
+                showMyPosts
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              }`}
+              onClick={() => setShowMyPosts(!showMyPosts)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {showMyPosts ? "My Posts" : "All Posts"}
+            </motion.button>
+          )}
           <div className="flex items-center gap-2">
             {filterOptions.map((opt) => (
               <motion.div
@@ -652,11 +685,7 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
-          <div className="text-sm text-gray-500">
-            {sortBy === "newest" && "Showing newest questions first"}
-            {sortBy === "unanswered" &&
-              "Showing questions without accepted answers"}
-          </div>
+
           <div className="flex-1 flex gap-2 justify-end">
             <div className="relative max-w-xs">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -737,6 +766,20 @@ export default function HomePage() {
                   ? "Send Universal Message"
                   : "Ask New Question"}
               </motion.button>
+              {user && user.role !== "admin" && (
+                <motion.button
+                  className={`w-full flex items-center gap-2 mt-2 px-4 py-2 rounded-md transition ${
+                    showMyPosts
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
+                  onClick={() => setShowMyPosts(!showMyPosts)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {showMyPosts ? "My Posts" : "All Posts"}
+                </motion.button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -783,7 +826,7 @@ export default function HomePage() {
                   </Button>
                 </>
               ) : (
-                <p>No questions found. Be the first to ask!</p>
+                <p>No questions found. Ask your first question!</p>
               )}
             </motion.div>
           ) : (
@@ -811,8 +854,8 @@ export default function HomePage() {
                   whileHover={{ y: -2 }}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center hover:shadow-md transition-shadow"
                 >
-                  <div className="flex flex-row md:flex-col items-center md:items-start md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
-                    <div className="text-center text-xs text-gray-500">
+                  <div className="flex flex-row md:flex-col items-center md:items-center md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
+                    <div className="text-center text-xs text-gray-500 w-full">
                       <span className="block font-bold text-lg text-primary-600">
                         {question.answers ? question.answers.length : 0}
                       </span>

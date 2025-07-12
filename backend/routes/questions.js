@@ -79,6 +79,51 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Get questions by authenticated user
+router.get("/my-questions", auth, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, sort = "newest" } = req.query;
+    const skip = (page - 1) * limit;
+
+    let sortOption = {};
+    switch (sort) {
+      case "newest":
+        sortOption = { createdAt: -1 };
+        break;
+      case "oldest":
+        sortOption = { createdAt: 1 };
+        break;
+      case "votes":
+        sortOption = { votes: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const questions = await Question.find({ author: req.user._id })
+      .populate("author", "username avatar")
+      .populate({
+        path: "answers",
+        select: "isAccepted",
+      })
+      .sort(sortOption)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Question.countDocuments({ author: req.user._id });
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      questions,
+      totalPages,
+      currentPage: parseInt(page),
+      total,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // Get single question
 router.get("/:id", async (req, res) => {
   try {
