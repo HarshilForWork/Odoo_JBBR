@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { useSocket } from "@/lib/socket-context";
 import { formatTimeAgo } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ThumbsUp,
@@ -404,21 +405,44 @@ export default function QuestionPage() {
       await axios.delete(`http://localhost:5000/api/answers/${answerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (question) {
-        setQuestion((prev) =>
-          prev
-            ? {
-                ...prev,
-                answers: prev.answers.filter(
-                  (answer) => answer._id !== answerId
-                ),
-              }
-            : null
-        );
-      }
       toast.success("Answer deleted successfully!");
+      fetchQuestion();
     } catch (error) {
       toast.error("Failed to delete answer");
+    }
+  };
+
+  const handleAcceptAnswer = async (answerId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `http://localhost:5000/api/answers/${answerId}/accept`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setQuestion(response.data.question);
+      toast.success("Answer marked as accepted!");
+    } catch (error) {
+      toast.error("Failed to accept answer");
+    }
+  };
+
+  const handleUnacceptAnswer = async (answerId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `http://localhost:5000/api/answers/${answerId}/unaccept`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setQuestion(response.data.question);
+      toast.success("Answer unmarked as accepted!");
+    } catch (error) {
+      toast.error("Failed to unaccept answer");
     }
   };
 
@@ -439,20 +463,37 @@ export default function QuestionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <motion.div
+      className="min-h-screen bg-gray-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <motion.header
+        className="bg-white border-b border-gray-200 sticky top-0 z-50"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-primary-600">
-              StackIt
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon">
-                  <Home className="h-5 w-5" />
-                </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link href="/" className="text-2xl font-bold text-primary-600">
+                StackIt
               </Link>
+            </motion.div>
+            <div className="flex items-center gap-4">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link href="/">
+                  <Button variant="ghost" size="icon">
+                    <Home className="h-5 w-5" />
+                  </Button>
+                </Link>
+              </motion.div>
               {user ? (
                 <div className="relative">
                   <button
@@ -498,7 +539,7 @@ export default function QuestionPage() {
             </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumbs */}
@@ -516,11 +557,16 @@ export default function QuestionPage() {
           </span>
         </div>
         {/* Question */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <motion.div
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <div className="flex gap-4">
             {/* Voting */}
             <div className="flex flex-col items-center space-y-2">
-              <button
+              <motion.button
                 onClick={() => handleVote("up", question._id, "question")}
                 className={`p-1 hover:bg-gray-100 rounded ${
                   user?._id &&
@@ -529,11 +575,13 @@ export default function QuestionPage() {
                     ? "text-blue-500"
                     : "text-gray-400"
                 }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <ThumbsUp className="h-5 w-5" />
-              </button>
+              </motion.button>
               <span className="text-lg font-semibold">{question.votes}</span>
-              <button
+              <motion.button
                 onClick={() => handleVote("down", question._id, "question")}
                 className={`p-1 hover:bg-gray-100 rounded ${
                   user?._id &&
@@ -542,9 +590,11 @@ export default function QuestionPage() {
                     ? "text-red-500"
                     : "text-gray-400"
                 }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <ThumbsDown className="h-5 w-5" />
-              </button>
+              </motion.button>
             </div>
             {/* Question Content */}
             <div className="flex-1">
@@ -558,7 +608,17 @@ export default function QuestionPage() {
                       className="w-full text-2xl font-bold text-gray-900 border border-gray-300 rounded px-2 py-1"
                     />
                   ) : (
-                    question.title
+                    <div className="flex items-center gap-2">
+                      {question.title}
+                      {question.answers.some((answer) => answer.isAccepted) && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-md">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">
+                            Solved
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </h1>
                 {user &&
@@ -653,130 +713,217 @@ export default function QuestionPage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* Answers */}
         <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h3 className="text-xl font-semibold text-gray-900">
             {question.answers.length} Answer
             {question.answers.length !== 1 ? "s" : ""}
-          </h2>
-          {question.answers.map((answer) => (
-            <div
-              key={answer._id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-            >
-              <div className="flex gap-4">
-                {/* Voting */}
-                <div className="flex flex-col items-center space-y-2">
-                  <button
-                    onClick={() => handleVote("up", answer._id, "answer")}
-                    className={`p-1 hover:bg-gray-100 rounded ${
-                      user?._id &&
-                      answer.upvotes &&
-                      answer.upvotes.some((id) => id === user._id)
-                        ? "text-blue-500"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    <ThumbsUp className="h-5 w-5" />
-                  </button>
-                  <span className="text-lg font-semibold">{answer.votes}</span>
-                  <button
-                    onClick={() => handleVote("down", answer._id, "answer")}
-                    className={`p-1 hover:bg-gray-100 rounded ${
-                      user?._id &&
-                      answer.downvotes &&
-                      answer.downvotes.some((id) => id === user._id)
-                        ? "text-red-500"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    <ThumbsDown className="h-5 w-5" />
-                  </button>
-                  {answer.isAccepted && (
-                    <Check className="h-5 w-5 text-green-500" />
-                  )}
-                </div>
-                {/* Answer Content */}
-                <div className="flex-1">
-                  {editingAnswer === answer._id ? (
-                    <div className="space-y-4 mb-4">
-                      <RichTextEditor
-                        value={editAnswerContent}
-                        onChange={setEditAnswerContent}
-                        placeholder="Edit your answer..."
-                      />
-                      <div className="flex gap-2">
-                        <Button onClick={() => handleSaveAnswer(answer._id)}>
-                          Save
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setEditingAnswer(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="prose max-w-none mb-4">
-                        <div
-                          dangerouslySetInnerHTML={{ __html: answer.content }}
+            {question.answers.length > 0 &&
+              !question.answers.some((answer) => answer.isAccepted) && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  (No accepted answer yet)
+                </span>
+              )}
+          </h3>
+          {question.answers
+            .sort((a, b) => {
+              // Sort accepted answers first
+              if (a.isAccepted && !b.isAccepted) return -1;
+              if (!a.isAccepted && b.isAccepted) return 1;
+              // Then sort by votes (descending)
+              if (a.votes !== b.votes) return b.votes - a.votes;
+              // Finally sort by creation date (newest first)
+              return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+              );
+            })
+            .map((answer) => (
+              <motion.div
+                key={answer._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`bg-white rounded-lg shadow-sm border p-6 ${
+                  answer.isAccepted
+                    ? "border-green-200 bg-green-50"
+                    : "border-gray-200"
+                }`}
+              >
+                {answer.isAccepted && (
+                  <div className="flex items-center gap-2 mb-4 p-2 bg-green-100 rounded-md">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">
+                      ✓ Accepted Answer
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-4">
+                  {/* Voting */}
+                  <div className="flex flex-col items-center space-y-2">
+                    <motion.button
+                      onClick={() => handleVote("up", answer._id, "answer")}
+                      className={`p-1 hover:bg-gray-100 rounded ${
+                        user?._id &&
+                        answer.upvotes &&
+                        answer.upvotes.some((id) => id === user._id)
+                          ? "text-blue-500"
+                          : "text-gray-400"
+                      }`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <ThumbsUp className="h-5 w-5" />
+                    </motion.button>
+                    <span className="text-lg font-semibold">
+                      {answer.votes}
+                    </span>
+                    <motion.button
+                      onClick={() => handleVote("down", answer._id, "answer")}
+                      className={`p-1 hover:bg-gray-100 rounded ${
+                        user?._id &&
+                        answer.downvotes &&
+                        answer.downvotes.some((id) => id === user._id)
+                          ? "text-red-500"
+                          : "text-gray-400"
+                      }`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <ThumbsDown className="h-5 w-5" />
+                    </motion.button>
+                    {answer.isAccepted && (
+                      <motion.div
+                        className="mt-2 p-1 bg-green-100 rounded-full"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        <Check className="h-4 w-4 text-green-600" />
+                      </motion.div>
+                    )}
+                  </div>
+                  {/* Answer Content */}
+                  <div className="flex-1">
+                    {editingAnswer === answer._id ? (
+                      <div className="space-y-4 mb-4">
+                        <RichTextEditor
+                          value={editAnswerContent}
+                          onChange={setEditAnswerContent}
+                          placeholder="Edit your answer..."
                         />
+                        <div className="flex gap-2">
+                          <Button onClick={() => handleSaveAnswer(answer._id)}>
+                            Save
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setEditingAnswer(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-
-                      {/* Answer Images */}
-                      {answer.images && answer.images.length > 0 && (
-                        <div className="mb-4">
-                          <div className="flex flex-wrap gap-2">
-                            {answer.images.map((image, index) => (
-                              <img
-                                key={index}
-                                src={image}
-                                alt={`Answer image ${index + 1}`}
-                                className="max-w-xs max-h-64 object-cover rounded-md border border-gray-200"
-                              />
-                            ))}
-                          </div>
+                    ) : (
+                      <>
+                        <div className="prose max-w-none mb-4">
+                          <div
+                            dangerouslySetInnerHTML={{ __html: answer.content }}
+                          />
                         </div>
-                      )}
 
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <div className="flex items-center space-x-2">
-                          <span>
-                            answered by {answer.author?.username || "Unknown"}
-                          </span>
-                          <span>{formatTimeAgo(answer.createdAt)}</span>
-                        </div>
-                        {user && answer.author?._id === user._id && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleEditAnswer(answer._id, answer.content)
-                              }
-                              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAnswer(answer._id)}
-                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                        {/* Answer Images */}
+                        {answer.images && answer.images.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex flex-wrap gap-2">
+                              {answer.images.map((image, index) => (
+                                <img
+                                  key={index}
+                                  src={image}
+                                  alt={`Answer image ${index + 1}`}
+                                  className="max-w-xs max-h-64 object-cover rounded-md border border-gray-200"
+                                />
+                              ))}
+                            </div>
                           </div>
                         )}
-                      </div>
-                    </>
-                  )}
+
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <span>
+                              answered by {answer.author?.username || "Unknown"}
+                            </span>
+                            <span>{formatTimeAgo(answer.createdAt)}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            {user && answer.author?._id === user._id && (
+                              <>
+                                <motion.button
+                                  onClick={() =>
+                                    handleEditAnswer(answer._id, answer.content)
+                                  }
+                                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </motion.button>
+                                <motion.button
+                                  onClick={() => handleDeleteAnswer(answer._id)}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </motion.button>
+                              </>
+                            )}
+                            {user && question?.author?._id === user._id && (
+                              <>
+                                {answer.isAccepted ? (
+                                  <motion.button
+                                    onClick={() =>
+                                      handleUnacceptAnswer(answer._id)
+                                    }
+                                    className="p-1 text-green-500 hover:text-green-700 hover:bg-green-50 rounded"
+                                    title="Unaccept Answer"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </motion.button>
+                                ) : (
+                                  <motion.button
+                                    onClick={() =>
+                                      handleAcceptAnswer(answer._id)
+                                    }
+                                    className="p-1 text-green-500 hover:text-green-700 hover:bg-green-50 rounded"
+                                    title="Accept Answer"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </motion.button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
         </div>
         {/* Add Answer */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-8">
+        <motion.div
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Submit Your Answer
           </h3>
@@ -794,26 +941,38 @@ export default function QuestionPage() {
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 {answerImagePreview.map((preview, index) => (
-                  <div key={index} className="relative">
+                  <motion.div
+                    key={index}
+                    className="relative"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}
                       className="w-20 h-20 object-cover rounded-md"
                     />
-                    <button
+                    <motion.button
                       type="button"
                       onClick={() => removeAnswerImage(index)}
                       className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 flex items-center justify-center"
                       title="Remove image"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                     >
                       <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                    </motion.button>
+                  </motion.div>
                 ))}
                 <label htmlFor="answer-image-upload" className="cursor-pointer">
-                  <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 hover:border-primary-500 hover:text-primary-600 transition-colors">
+                  <motion.div
+                    className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 hover:border-primary-500 hover:text-primary-600 transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     <Upload className="h-6 w-6" />
-                  </div>
+                  </motion.div>
                   <input
                     type="file"
                     id="answer-image-upload"
@@ -827,12 +986,17 @@ export default function QuestionPage() {
             </div>
 
             <div className="flex justify-end mt-4">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Posting..." : "Submit"}
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Posting..." : "Submit"}
+                </Button>
+              </motion.div>
             </div>
           </form>
-        </div>
+        </motion.div>
         {/* Login Prompt Modal (placeholder) */}
         {showLoginPrompt && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -884,6 +1048,6 @@ export default function QuestionPage() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

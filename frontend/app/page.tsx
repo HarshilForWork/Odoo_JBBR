@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSocket } from "@/lib/socket-context";
 import { formatTimeAgo } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Plus,
   Filter,
-  ChevronDown,
   Menu,
   UserCircle,
   LogOut,
@@ -118,17 +118,15 @@ export default function HomePage() {
       socket.on("new-question", (question: Question) => {
         setQuestions((prev) => [question, ...prev]);
         toast.success("New question posted!");
-        refreshNotifications(); // Refresh notifications after new question
+        refreshNotifications();
       });
 
-      // Listen for new notifications
       socket.on("new-notification", (notification) => {
         console.log("Received new notification:", notification);
         setNotifications((prev) => [notification, ...prev]);
         toast.success("New notification received!");
       });
 
-      // Join user's notification room
       if (user) {
         socket.emit("join-user", user._id);
       }
@@ -158,7 +156,6 @@ export default function HomePage() {
   // Fetch notifications and announcements
   useEffect(() => {
     if (user) {
-      // Fetch notifications
       axios
         .get("http://localhost:5000/api/notifications", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -172,7 +169,6 @@ export default function HomePage() {
           setNotifications([]);
         });
 
-      // Fetch announcements
       axios
         .get("http://localhost:5000/api/announcements")
         .then((res) => {
@@ -184,9 +180,7 @@ export default function HomePage() {
           setAnnouncements([]);
         });
 
-      // Set up periodic refresh every 30 seconds
       const interval = setInterval(refreshNotifications, 30000);
-
       return () => clearInterval(interval);
     } else {
       setNotifications([]);
@@ -210,7 +204,6 @@ export default function HomePage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      // Update the notification in the local state
       setNotifications((prev) =>
         prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
       );
@@ -228,7 +221,6 @@ export default function HomePage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      // Update all notifications in the local state
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       toast.success("All notifications marked as read!");
     } catch (error) {
@@ -278,24 +270,37 @@ export default function HomePage() {
   const filterOptions = [
     { label: "Newest", value: "newest" },
     { label: "Unanswered", value: "unanswered" },
-    { label: "More", value: "more" },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <motion.div
+      className="min-h-screen bg-gray-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <motion.header
+        className="bg-white border-b border-gray-200 sticky top-0 z-50"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
-            <Link href="/" className="text-2xl font-bold text-primary-600">
-              StackIt
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link href="/" className="text-2xl font-bold text-primary-600">
+                StackIt
+              </Link>
+            </motion.div>
             <div className="flex items-center space-x-4">
               {user && (
                 <div className="relative">
-                  <button
+                  <motion.button
                     className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none hover:bg-gray-100"
                     onClick={() => setShowNotifications((v) => !v)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                   >
                     <Bell
                       className={`h-5 w-5 ${
@@ -305,188 +310,192 @@ export default function HomePage() {
                           : "text-blue-500"
                       }`}
                     />
-                    {(notifications.filter((n) => !n.isRead).length > 0 ||
-                      announcements.length > 0) && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                        {notifications.filter((n) => !n.isRead).length +
-                          announcements.length}
-                      </span>
-                    )}
-                  </button>
-                  {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                      <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900 flex justify-between items-center">
-                        <span>Notifications & Announcements</span>
-                        {notifications.length > 0 && (
-                          <button
-                            onClick={markAllAsRead}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
-                      </div>
-                      {announcements.length > 0 && (
-                        <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
-                          <div className="text-sm font-medium text-blue-900 mb-2 flex justify-between items-center">
-                            <span>📢 Announcements</span>
+                    <AnimatePresence>
+                      {(notifications.filter((n) => !n.isRead).length > 0 ||
+                        announcements.length > 0) && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center"
+                        >
+                          {notifications.filter((n) => !n.isRead).length +
+                            announcements.length}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+                      >
+                        <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900 flex justify-between items-center">
+                          <span>Notifications & Announcements</span>
+                          {notifications.length > 0 && (
                             <button
-                              onClick={() => setAnnouncements([])}
+                              onClick={markAllAsRead}
                               className="text-xs text-blue-600 hover:text-blue-800"
                             >
-                              Clear all
+                              Mark all as read
                             </button>
-                          </div>
-                          {announcements.map((announcement) => (
-                            <div
-                              key={announcement._id}
-                              className="text-sm text-blue-800 mb-2"
-                            >
-                              <div className="font-medium">
-                                {announcement.title}
-                              </div>
-                              <div className="text-xs text-blue-600">
-                                {new Date(
-                                  announcement.createdAt
-                                ).toLocaleDateString()}
-                              </div>
+                          )}
+                        </div>
+                        {announcements.length > 0 && (
+                          <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
+                            <div className="text-sm font-medium text-blue-900 mb-2 flex justify-between items-center">
+                              <span>📢 Announcements</span>
+                              <button
+                                onClick={() => setAnnouncements([])}
+                                className="text-xs text-blue-600 hover:text-blue-800"
+                              >
+                                Clear all
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                      {notifications.length === 0 &&
-                      announcements.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-gray-500">
-                          <div className="text-2xl mb-2">🔔</div>
-                          <div className="text-sm">No notifications yet</div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            You'll see notifications here when someone interacts
-                            with your content
+                            {announcements.map((announcement) => (
+                              <div
+                                key={announcement._id}
+                                className="text-sm text-blue-800 mb-2"
+                              >
+                                <div className="font-medium">
+                                  {announcement.title}
+                                </div>
+                                <div className="text-xs text-blue-600">
+                                  {new Date(
+                                    announcement.createdAt
+                                  ).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      ) : (
-                        notifications.map((notification, i) => (
-                          <div
-                            key={notification._id || i}
-                            className={`px-4 py-3 border-b border-gray-100 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors ${
-                              !notification.isRead ? "bg-blue-50" : ""
-                            }`}
-                            onClick={async () => {
-                              // Mark as read if not already read
-                              if (!notification.isRead) {
-                                markNotificationAsRead(notification._id);
-                              }
-
-                              // Debug: Log notification structure
-                              console.log(
-                                "Notification clicked:",
-                                notification
-                              );
-                              console.log(
-                                "Question field:",
-                                notification.question
-                              );
-                              console.log(
-                                "Question type:",
-                                typeof notification.question
-                              );
-
-                              // Navigate based on notification type
-                              if (notification.question) {
-                                // Handle both populated question object and question ID string
-                                const questionId =
-                                  typeof notification.question === "object"
-                                    ? notification.question._id
-                                    : notification.question;
-                                console.log(
-                                  "Extracted question ID:",
-                                  questionId
-                                );
-
-                                // Verify the question exists before navigating
-                                try {
-                                  const response = await axios.get(
-                                    `http://localhost:5000/api/questions/${questionId}`
-                                  );
-                                  if (response.data.question) {
-                                    router.push(`/questions/${questionId}`);
-                                    setShowNotifications(false);
-                                  } else {
-                                    toast.error("Question no longer exists");
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "Error verifying question:",
-                                    error
-                                  );
-                                  toast.error(
-                                    "Question not found or no longer exists"
-                                  );
+                        )}
+                        {notifications.length === 0 &&
+                        announcements.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-gray-500">
+                            <div className="text-2xl mb-2">🔔</div>
+                            <div className="text-sm">No notifications yet</div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              You'll see notifications here when someone
+                              interacts with your content
+                            </div>
+                          </div>
+                        ) : (
+                          notifications.map((notification, i) => (
+                            <motion.div
+                              key={notification._id || i}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.1 }}
+                              className={`px-4 py-3 border-b border-gray-100 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                !notification.isRead ? "bg-blue-50" : ""
+                              }`}
+                              onClick={async () => {
+                                if (!notification.isRead) {
+                                  markNotificationAsRead(notification._id);
                                 }
-                              } else if (notification.link) {
-                                router.push(notification.link);
-                                setShowNotifications(false);
-                              }
-                            }}
-                          >
-                            <div className="font-medium text-gray-900 mb-1 flex items-center justify-between">
-                              <span className="flex items-center gap-2">
-                                {notification.type === "answer" && "💬"}
-                                {notification.type === "vote" && "👍"}
-                                {notification.type === "accept" && "✅"}
-                                {notification.type === "global_message" && "📢"}
-                                {notification.title}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {!notification.isRead && (
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setNotifications((prev) =>
-                                      prev.filter(
-                                        (n) => n._id !== notification._id
-                                      )
+
+                                if (notification.question) {
+                                  const questionId =
+                                    typeof notification.question === "object"
+                                      ? notification.question._id
+                                      : notification.question;
+
+                                  try {
+                                    const response = await axios.get(
+                                      `http://localhost:5000/api/questions/${questionId}`
                                     );
-                                  }}
-                                  className="text-gray-400 hover:text-gray-600 text-xs"
-                                  title="Dismiss notification"
-                                >
-                                  ×
-                                </button>
+                                    if (response.data.question) {
+                                      router.push(`/questions/${questionId}`);
+                                      setShowNotifications(false);
+                                    } else {
+                                      toast.error("Question no longer exists");
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "Error verifying question:",
+                                      error
+                                    );
+                                    toast.error(
+                                      "Question not found or no longer exists"
+                                    );
+                                  }
+                                } else if (notification.link) {
+                                  router.push(notification.link);
+                                  setShowNotifications(false);
+                                }
+                              }}
+                            >
+                              <div className="font-medium text-gray-900 mb-1 flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                  {notification.type === "answer" && "💬"}
+                                  {notification.type === "vote" && "👍"}
+                                  {notification.type === "accept" && "✅"}
+                                  {notification.type === "global_message" &&
+                                    "📢"}
+                                  {notification.title}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {!notification.isRead && (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      className="w-2 h-2 bg-blue-500 rounded-full"
+                                    />
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setNotifications((prev) =>
+                                        prev.filter(
+                                          (n) => n._id !== notification._id
+                                        )
+                                      );
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 text-xs"
+                                    title="Dismiss notification"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-gray-600 mb-1">
-                              {notification.message}
-                            </div>
-                            <div className="text-xs text-gray-500 flex items-center justify-between">
-                              <span>
-                                by {notification.sender?.username || "Unknown"}
-                              </span>
-                              <span>
-                                {new Date(
-                                  notification.createdAt
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {(notification.question || notification.link) && (
-                              <div className="text-xs text-blue-600 mt-1">
-                                Click to view →
+                              <div className="text-gray-600 mb-1">
+                                {notification.message}
                               </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
+                              <div className="text-xs text-gray-500 flex items-center justify-between">
+                                <span>
+                                  by{" "}
+                                  {notification.sender?.username || "Unknown"}
+                                </span>
+                                <span>
+                                  {new Date(
+                                    notification.createdAt
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {(notification.question || notification.link) && (
+                                <div className="text-xs text-blue-600 mt-1">
+                                  Click to view →
+                                </div>
+                              )}
+                            </motion.div>
+                          ))
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
               {user ? (
                 <div className="relative">
-                  <button
+                  <motion.button
                     className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center focus:outline-none"
                     onClick={() => setShowProfileMenu((v) => !v)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     {user.avatar ? (
                       <img
@@ -497,32 +506,40 @@ export default function HomePage() {
                     ) : (
                       <UserCircle className="h-6 w-6 text-gray-400" />
                     )}
-                  </button>
-                  {showProfileMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <div className="font-semibold text-gray-900">
-                          {user.username}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {user.email}
-                        </div>
-                      </div>
-                      {user.role === "admin" && (
-                        <Link href="/admin">
-                          <button className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                            <UserCircle className="h-4 w-4" /> Admin Dashboard
-                          </button>
-                        </Link>
-                      )}
-                      <button
-                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={handleLogout}
+                  </motion.button>
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
                       >
-                        <LogOut className="h-4 w-4" /> Logout
-                      </button>
-                    </div>
-                  )}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="font-semibold text-gray-900">
+                            {user.username}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {user.email}
+                          </div>
+                        </div>
+                        {user.role === "admin" && (
+                          <Link href="/admin">
+                            <button className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                              <UserCircle className="h-4 w-4" /> Admin Dashboard
+                            </button>
+                          </Link>
+                        )}
+                        <button
+                          className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="h-4 w-4" /> Logout
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <Link href="/auth/login">
@@ -531,54 +548,74 @@ export default function HomePage() {
                   </Button>
                 </Link>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={() => setShowMobileFilters((v) => !v)}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Menu className="h-5 w-5" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  onClick={() => setShowMobileFilters((v) => !v)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </motion.div>
             </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Announcements Section */}
-      {announcements.length > 0 && (
-        <div className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-blue-900 mb-3">
-              📢 Platform Announcements
-            </h3>
-            <div className="space-y-3">
-              {announcements.map((announcement) => (
-                <div
-                  key={announcement._id}
-                  className="bg-white rounded-lg p-4 border border-blue-100"
-                >
-                  <h4 className="font-medium text-blue-900 mb-2">
-                    {announcement.title}
-                  </h4>
-                  <div
-                    className="text-blue-800 text-sm"
-                    dangerouslySetInnerHTML={{ __html: announcement.message }}
-                  />
-                  <div className="text-xs text-blue-600 mt-2">
-                    By {announcement.author?.username || "Admin"} •{" "}
-                    {new Date(announcement.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+      <AnimatePresence>
+        {announcements.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-4"
+          >
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-blue-900 mb-3">
+                📢 Platform Announcements
+              </h3>
+              <div className="space-y-3">
+                {announcements.map((announcement, index) => (
+                  <motion.div
+                    key={announcement._id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white rounded-lg p-4 border border-blue-100"
+                  >
+                    <h4 className="font-medium text-blue-900 mb-2">
+                      {announcement.title}
+                    </h4>
+                    <div
+                      className="text-blue-800 text-sm"
+                      dangerouslySetInnerHTML={{ __html: announcement.message }}
+                    />
+                    <div className="text-xs text-blue-600 mt-2">
+                      By {announcement.author?.username || "Admin"} •{" "}
+                      {new Date(announcement.createdAt).toLocaleDateString()}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
         {/* Filter Bar (Desktop) */}
-        <div className="hidden lg:flex items-center gap-4 mb-6">
-          <button
+        <motion.div
+          className="hidden lg:flex items-center gap-4 mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <motion.button
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition"
             onClick={() => {
               if (!user) {
@@ -589,27 +626,36 @@ export default function HomePage() {
                 router.push("/ask");
               }
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Plus className="h-4 w-4" />
             {user?.role === "admin"
               ? "Send Universal Message"
               : "Ask New Question"}
-          </button>
+          </motion.button>
           <div className="flex items-center gap-2">
             {filterOptions.map((opt) => (
-              <Button
+              <motion.div
                 key={opt.value}
-                variant={sortBy === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSortBy(opt.value)}
-                className="capitalize"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                {opt.label}
-                {opt.value === "more" && (
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                )}
-              </Button>
+                <Button
+                  variant={sortBy === opt.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSortBy(opt.value)}
+                  className="capitalize"
+                >
+                  {opt.label}
+                </Button>
+              </motion.div>
             ))}
+          </div>
+          <div className="text-sm text-gray-500">
+            {sortBy === "newest" && "Showing newest questions first"}
+            {sortBy === "unanswered" &&
+              "Showing questions without accepted answers"}
           </div>
           <div className="flex-1 flex gap-2 justify-end">
             <div className="relative max-w-xs">
@@ -628,77 +674,100 @@ export default function HomePage() {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filter Bar (Mobile) */}
-        {showMobileFilters && (
-          <div className="lg:hidden bg-white border border-gray-200 rounded-lg p-4 mb-4 flex flex-col gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                type="text"
-                placeholder="Search questions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              {loading && searchTerm && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              {filterOptions.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={sortBy === opt.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSortBy(opt.value)}
-                  className="capitalize w-full"
-                >
-                  {opt.label}
-                  {opt.value === "more" && (
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  )}
-                </Button>
-              ))}
-            </div>
-            <button
-              className="w-full flex items-center gap-2 mt-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition"
-              onClick={() => {
-                if (!user) {
-                  setShowAuthModal(true);
-                } else if (user.role === "admin") {
-                  router.push("/admin");
-                } else {
-                  router.push("/ask");
-                }
-              }}
+        <AnimatePresence>
+          {showMobileFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden bg-white border border-gray-200 rounded-lg p-4 mb-4 flex flex-col gap-3"
             >
-              <Plus className="h-4 w-4" />
-              {user?.role === "admin"
-                ? "Send Universal Message"
-                : "Ask New Question"}
-            </button>
-          </div>
-        )}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search questions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                {loading && searchTerm && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                {filterOptions.map((opt) => (
+                  <motion.div
+                    key={opt.value}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      variant={sortBy === opt.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSortBy(opt.value)}
+                      className="capitalize w-full"
+                    >
+                      {opt.label}
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+              <motion.button
+                className="w-full flex items-center gap-2 mt-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition"
+                onClick={() => {
+                  if (!user) {
+                    setShowAuthModal(true);
+                  } else if (user.role === "admin") {
+                    router.push("/admin");
+                  } else {
+                    router.push("/ask");
+                  }
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Plus className="h-4 w-4" />
+                {user?.role === "admin"
+                  ? "Send Universal Message"
+                  : "Ask New Question"}
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Questions List */}
         {searchTerm && !loading && (
-          <div className="mb-4 text-sm text-gray-600">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-4 text-sm text-gray-600"
+          >
             Found {questions.length} question{questions.length !== 1 ? "s" : ""}{" "}
             for "{searchTerm}"
-          </div>
+          </motion.div>
         )}
         <div className="space-y-4">
           {loading ? (
-            <div className="text-center py-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-8"
+            >
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-gray-600">Searching...</p>
-            </div>
+            </motion.div>
           ) : questions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-8 text-gray-500"
+            >
               {searchTerm ? (
                 <>
                   <p className="text-lg font-medium mb-2">No questions found</p>
@@ -716,23 +785,30 @@ export default function HomePage() {
               ) : (
                 <p>No questions found. Be the first to ask!</p>
               )}
-            </div>
+            </motion.div>
           ) : (
-            questions.map((question) => {
+            questions.map((question, index) => {
               if (!question || !question.author) {
                 return (
-                  <div
+                  <motion.div
                     key={question?._id || Math.random()}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index }}
                     className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
                   >
                     <div className="text-red-500">Error loading question</div>
-                  </div>
+                  </motion.div>
                 );
               }
 
               return (
-                <div
+                <motion.div
                   key={question._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  whileHover={{ y: -2 }}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center hover:shadow-md transition-shadow"
                 >
                   <div className="flex flex-row md:flex-col items-center md:items-start md:w-16 w-full mb-2 md:mb-0 md:mr-4 gap-2 md:gap-0">
@@ -741,6 +817,15 @@ export default function HomePage() {
                         {question.answers ? question.answers.length : 0}
                       </span>
                       <span>ans</span>
+                      {question.answers && question.answers.length > 0 && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {question.answers.some(
+                            (answer: any) => answer.isAccepted
+                          )
+                            ? "✓ Solved"
+                            : "No accepted answer"}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex-1">
@@ -780,7 +865,7 @@ export default function HomePage() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -788,49 +873,71 @@ export default function HomePage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center mt-8">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex justify-center mt-8"
+          >
             <div className="flex space-x-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (page) => (
-                  <Button
+                  <motion.div
                     key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {page}
-                  </Button>
+                    <Button
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  </motion.div>
                 )
               )}
             </div>
-          </div>
+          </motion.div>
         )}
+
         {/* Auth Modal */}
-        {showAuthModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-              <h2 className="text-lg font-semibold mb-4">
-                Please Login or Sign Up
-              </h2>
-              <p className="mb-4">You must be logged in to ask a question.</p>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAuthModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={() => router.push("/auth/login")}>
-                  Login
-                </Button>
-                <Button onClick={() => router.push("/auth/register")}>
-                  Sign Up
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {showAuthModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full"
+              >
+                <h2 className="text-lg font-semibold mb-4">
+                  Please Login or Sign Up
+                </h2>
+                <p className="mb-4">You must be logged in to ask a question.</p>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAuthModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={() => router.push("/auth/login")}>
+                    Login
+                  </Button>
+                  <Button onClick={() => router.push("/auth/register")}>
+                    Sign Up
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

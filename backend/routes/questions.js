@@ -33,7 +33,10 @@ router.get("/", async (req, res) => {
         sortOption = { votes: -1 };
         break;
       case "unanswered":
-        query.answers = { $size: 0 };
+        // Questions with no accepted answers
+        // First, get all questions and then filter in memory for now
+        // This is simpler than complex MongoDB queries
+        query = {}; // Get all questions, we'll filter after
         sortOption = { createdAt: -1 };
         break;
       default:
@@ -42,15 +45,31 @@ router.get("/", async (req, res) => {
 
     const questions = await Question.find(query)
       .populate("author", "username avatar")
+      .populate({
+        path: "answers",
+        select: "isAccepted",
+      })
       .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit));
+
+    // Filter for unanswered questions if needed
+    let filteredQuestions = questions;
+    if (sort === "unanswered") {
+      filteredQuestions = questions.filter((question) => {
+        // Question is unanswered if it has no answers OR no accepted answers
+        return (
+          question.answers.length === 0 ||
+          !question.answers.some((answer) => answer.isAccepted)
+        );
+      });
+    }
 
     const total = await Question.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
     res.json({
-      questions,
+      questions: filteredQuestions,
       totalPages,
       currentPage: parseInt(page),
       total,

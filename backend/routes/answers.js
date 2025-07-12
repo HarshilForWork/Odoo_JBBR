@@ -235,6 +235,7 @@ router.post("/:id/accept", auth, async (req, res) => {
 
     answer.isAccepted = true;
     await answer.save();
+    await answer.populate("author", "username avatar");
 
     // Create accept notification
     const io = req.app.locals.io;
@@ -246,9 +247,51 @@ router.post("/:id/accept", auth, async (req, res) => {
       io
     );
 
-    res.json({ answer });
+    // Return the updated question with all answers
+    const updatedQuestion = await Question.findById(answer.question)
+      .populate("author", "username avatar")
+      .populate({
+        path: "answers",
+        populate: { path: "author", select: "username avatar" },
+      });
+
+    res.json({ question: updatedQuestion });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+// Unmark answer as accepted
+router.post("/:id/unaccept", auth, async (req, res) => {
+  try {
+    const answer = await Answer.findById(req.params.id);
+
+    if (!answer) {
+      return res.status(404).json({ message: "Answer not found" });
+    }
+
+    // Check if user is question author
+    const question = await Question.findById(answer.question);
+    if (!question || question.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    answer.isAccepted = false;
+    await answer.save();
+    await answer.populate("author", "username avatar");
+
+    // Return the updated question with all answers
+    const updatedQuestion = await Question.findById(answer.question)
+      .populate("author", "username avatar")
+      .populate({
+        path: "answers",
+        populate: { path: "author", select: "username avatar" },
+      });
+
+    res.json({ question: updatedQuestion });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 module.exports = router;

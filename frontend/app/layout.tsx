@@ -1,27 +1,33 @@
-import type React from "react"
-import type { Metadata } from "next"
-import "./globals.css"
-import { SocketProvider } from "@/lib/socket-context"
-import { Toaster } from "react-hot-toast"
+"use client";
 
-export const metadata: Metadata = {
-  title: "StackIt - Q&A Forum Platform",
-  description: "A modern Q&A forum platform for developers",
-}
+import type React from "react";
+import { Toaster } from "react-hot-toast";
+import { SocketProvider } from "@/lib/socket-context";
+import { motion, AnimatePresence } from "framer-motion";
+import "./globals.css";
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
       <body>
         <SocketProvider>
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
           <Toaster position="top-right" />
         </SocketProvider>
       </body>
     </html>
-  )
+  );
 }
