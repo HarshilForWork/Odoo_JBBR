@@ -17,6 +17,8 @@ import {
   LogOut,
   Edit,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
@@ -44,6 +46,7 @@ interface Answer {
   isAccepted: boolean;
   createdAt: string;
   question?: string;
+  images?: string[];
 }
 
 interface Question {
@@ -51,6 +54,7 @@ interface Question {
   title: string;
   description: string;
   tags: string[];
+  images?: string[];
   author: {
     _id: string;
     username: string;
@@ -79,6 +83,10 @@ export default function QuestionPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editAnswerContent, setEditAnswerContent] = useState("");
+  const [answerImages, setAnswerImages] = useState<File[]>([]);
+  const [answerImagePreview, setAnswerImagePreview] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
   const params = useParams();
   const router = useRouter();
   const { socket } = useSocket();
@@ -122,7 +130,7 @@ export default function QuestionPage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5001/api/auth/profile", {
+        .get("http://localhost:5000/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -139,11 +147,47 @@ export default function QuestionPage() {
     window.location.reload();
   };
 
+  const handleAnswerImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + answerImages.length > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not an image file`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setAnswerImages((prev) => [...prev, ...validFiles]);
+
+    // Create previews
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAnswerImagePreview((prev) => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeAnswerImage = (index: number) => {
+    setAnswerImages((prev) => prev.filter((_, i) => i !== index));
+    setAnswerImagePreview((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const fetchQuestion = async () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:5001/api/questions/${params.id}`
+        `http://localhost:5000/api/questions/${params.id}`
       );
       const questionData = response.data.question;
 
@@ -157,8 +201,13 @@ export default function QuestionPage() {
         ...questionData,
         answers: answersWithAuthors,
       });
-    } catch (error) {
-      toast.error("Failed to fetch question");
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        toast.error("Question not found");
+        router.push("/");
+      } else {
+        toast.error("Failed to fetch question");
+      }
     } finally {
       setLoading(false);
     }
@@ -177,17 +226,28 @@ export default function QuestionPage() {
     try {
       setSubmitting(true);
       const token = localStorage.getItem("token");
+
+      const formData = new FormData();
+      formData.append("content", answerContent);
+      formData.append("questionId", params.id as string);
+
+      answerImages.forEach((image) => {
+        formData.append("images", image);
+      });
+
       const response = await axios.post(
-        "http://localhost:5001/api/answers",
+        "http://localhost:5000/api/answers",
+        formData,
         {
-          content: answerContent,
-          questionId: params.id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
       setAnswerContent("");
+      setAnswerImages([]);
+      setAnswerImagePreview([]);
       toast.success("Answer posted successfully!");
       if (question) {
         const answerWithAuthor = {
@@ -223,8 +283,8 @@ export default function QuestionPage() {
       const token = localStorage.getItem("token");
       const endpoint =
         itemType === "question"
-          ? `http://localhost:5001/api/questions/${itemId}/vote`
-          : `http://localhost:5001/api/answers/${itemId}/vote`;
+          ? `http://localhost:5000/api/questions/${itemId}/vote`
+          : `http://localhost:5000/api/answers/${itemId}/vote`;
       const response = await axios.post(
         endpoint,
         { voteType: type },
@@ -255,7 +315,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5001/api/questions/${question._id}`,
+        `http://localhost:5000/api/questions/${question._id}`,
         {
           title: editTitle,
           description: editDescription,
@@ -279,7 +339,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `http://localhost:5001/api/questions/${question._id}`,
+        `http://localhost:5000/api/questions/${question._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -300,7 +360,7 @@ export default function QuestionPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5001/api/answers/${answerId}`,
+        `http://localhost:5000/api/answers/${answerId}`,
         {
           content: editAnswerContent,
         },
@@ -341,7 +401,7 @@ export default function QuestionPage() {
     if (!confirm("Are you sure you want to delete this answer?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5001/api/answers/${answerId}`, {
+      await axios.delete(`http://localhost:5000/api/answers/${answerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (question) {
@@ -551,6 +611,23 @@ export default function QuestionPage() {
                       dangerouslySetInnerHTML={{ __html: question.description }}
                     />
                   </div>
+
+                  {/* Question Images */}
+                  {question.images && question.images.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {question.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`Question image ${index + 1}`}
+                            className="max-w-xs max-h-64 object-cover rounded-md border border-gray-200"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2 mb-4">
                     {question.tags.map((tag) => (
                       <span
@@ -648,6 +725,23 @@ export default function QuestionPage() {
                           dangerouslySetInnerHTML={{ __html: answer.content }}
                         />
                       </div>
+
+                      {/* Answer Images */}
+                      {answer.images && answer.images.length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex flex-wrap gap-2">
+                            {answer.images.map((image, index) => (
+                              <img
+                                key={index}
+                                src={image}
+                                alt={`Answer image ${index + 1}`}
+                                className="max-w-xs max-h-64 object-cover rounded-md border border-gray-200"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <div className="flex items-center space-x-2">
                           <span>
@@ -692,6 +786,46 @@ export default function QuestionPage() {
               onChange={setAnswerContent}
               placeholder="Write your answer here..."
             />
+
+            {/* Image Upload */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Add Images (max 5, 10MB each)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {answerImagePreview.map((preview, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeAnswerImage(index)}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 flex items-center justify-center"
+                      title="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <label htmlFor="answer-image-upload" className="cursor-pointer">
+                  <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 hover:border-primary-500 hover:text-primary-600 transition-colors">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <input
+                    type="file"
+                    id="answer-image-upload"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAnswerImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
             <div className="flex justify-end mt-4">
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Posting..." : "Submit"}

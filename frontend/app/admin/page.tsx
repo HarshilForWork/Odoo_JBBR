@@ -30,9 +30,12 @@ export default function AdminPage() {
         return;
       }
 
-      const response = await axios.get("http://localhost:5001/api/auth/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        "http://localhost:5000/api/auth/profile",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const userData = response.data.user;
       setUser(userData);
@@ -66,4 +69,4 @@ export default function AdminPage() {
   }
 
   return <AdminDashboard />;
-} 
+}

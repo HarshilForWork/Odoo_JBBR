@@ -21,14 +21,14 @@ router.get("/stats", async (req, res) => {
     const adminUsers = await User.countDocuments({ role: "admin" });
     const bannedUsers = await User.countDocuments({ isBanned: true });
     const activeUsers = await User.countDocuments({ isBanned: false });
-    
+
     // Get recent activity
     const recentQuestions = await Question.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     });
-    
+
     const recentAnswers = await Answer.countDocuments({
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     });
 
     // Get top users
@@ -56,22 +56,28 @@ router.get("/stats", async (req, res) => {
 // Get all users with detailed information
 router.get("/users", async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "", role = "", banned = "" } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      role = "",
+      banned = "",
+    } = req.query;
     const skip = (page - 1) * limit;
 
     let query = {};
-    
+
     if (search) {
       query.$or = [
         { username: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
+        { email: { $regex: search, $options: "i" } },
       ];
     }
-    
+
     if (role && role !== "all") {
       query.role = role;
     }
-    
+
     if (banned === "true") {
       query.isBanned = true;
     } else if (banned === "false") {
@@ -174,11 +180,9 @@ router.put("/users/:id/ban", async (req, res) => {
       bannedAt: isBanned ? new Date() : null,
     };
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).select("-password");
+    const user = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-password");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -197,7 +201,9 @@ router.delete("/users/:id", async (req, res) => {
 
     // Don't allow admin to delete themselves
     if (id === req.user._id.toString()) {
-      return res.status(400).json({ message: "Cannot delete your own account" });
+      return res
+        .status(400)
+        .json({ message: "Cannot delete your own account" });
     }
 
     const user = await User.findByIdAndDelete(id);
@@ -222,14 +228,14 @@ router.get("/questions", async (req, res) => {
     const skip = (page - 1) * limit;
 
     let query = {};
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } }
+        { description: { $regex: search, $options: "i" } },
       ];
     }
-    
+
     if (author) {
       query.author = author;
     }
@@ -279,11 +285,11 @@ router.get("/answers", async (req, res) => {
     const skip = (page - 1) * limit;
 
     let query = {};
-    
+
     if (search) {
       query.content = { $regex: search, $options: "i" };
     }
-    
+
     if (author) {
       query.author = author;
     }
@@ -330,7 +336,9 @@ router.post("/global-messages", async (req, res) => {
     const { title, message, priority, targetAudience, expiresAt } = req.body;
 
     if (!title || !message) {
-      return res.status(400).json({ message: "Title and message are required" });
+      return res
+        .status(400)
+        .json({ message: "Title and message are required" });
     }
 
     const globalMessage = new GlobalMessage({
@@ -356,17 +364,20 @@ router.post("/global-messages", async (req, res) => {
     }
 
     // Create notifications for all target users
-    const notifications = targetUsers.map(user => ({
-      recipient: user._id,
-      sender: req.user._id,
-      type: "global_message",
-      title: "Global Message",
-      message: title,
-      link: `/admin/messages/${globalMessage._id}`,
-    }));
+    const io = req.app.locals.io;
+    const { createNotification } = require("../utils/notifications");
 
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
+    for (const user of targetUsers) {
+      await createNotification(
+        user._id,
+        req.user._id,
+        "global_message",
+        "Global Message",
+        title,
+        null,
+        null,
+        io
+      );
     }
 
     res.status(201).json({ globalMessage });
@@ -391,7 +402,8 @@ router.get("/global-messages", async (req, res) => {
 // Update global message
 router.put("/global-messages/:id", async (req, res) => {
   try {
-    const { title, message, priority, targetAudience, isActive, expiresAt } = req.body;
+    const { title, message, priority, targetAudience, isActive, expiresAt } =
+      req.body;
     const { id } = req.params;
 
     const globalMessage = await GlobalMessage.findByIdAndUpdate(
@@ -433,4 +445,4 @@ router.delete("/global-messages/:id", async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

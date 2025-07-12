@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const answerSchema = new mongoose.Schema(
   {
@@ -6,6 +6,12 @@ const answerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    images: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -20,14 +26,18 @@ const answerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    upvotes: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    downvotes: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
+    upvotes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    downvotes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     isAccepted: {
       type: Boolean,
       default: false,
@@ -35,7 +45,7 @@ const answerSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
-)
+  }
+);
 
-module.exports = mongoose.model("Answer", answerSchema)
+module.exports = mongoose.model("Answer", answerSchema);

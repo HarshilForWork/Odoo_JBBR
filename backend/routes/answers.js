@@ -25,34 +25,58 @@ router.get("/question/:questionId", async (req, res) => {
 // Create answer
 router.post("/", auth, async (req, res) => {
   try {
-    const { content, questionId } = req.body;
-    const authorId = req.user._id;
+    const upload = req.app.locals.upload;
 
-    const answer = new Answer({
-      content,
-      question: questionId,
-      author: authorId,
+    // Handle file upload
+    upload.array("images", 5)(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      try {
+        const { content, questionId } = req.body;
+        const authorId = req.user._id;
+
+        // Process uploaded images
+        const imageUrls = [];
+        if (req.files && req.files.length > 0) {
+          req.files.forEach((file) => {
+            imageUrls.push(`http://localhost:5000/uploads/${file.filename}`);
+          });
+        }
+
+        const answer = new Answer({
+          content,
+          images: imageUrls,
+          question: questionId,
+          author: authorId,
+        });
+
+        await answer.save();
+        await answer.populate("author", "username avatar");
+
+        // Add answer to question
+        const question = await Question.findByIdAndUpdate(questionId, {
+          $push: { answers: answer._id },
+        });
+
+        // Create notification for question author
+        if (question) {
+          const io = req.app.locals.io;
+          await createAnswerNotification(
+            question.author,
+            authorId,
+            questionId,
+            question.title,
+            io
+          );
+        }
+
+        res.status(201).json({ answer });
+      } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+      }
     });
-
-    await answer.save();
-    await answer.populate("author", "username avatar");
-
-    // Add answer to question
-    const question = await Question.findByIdAndUpdate(questionId, {
-      $push: { answers: answer._id },
-    });
-
-    // Create notification for question author
-    if (question) {
-      await createAnswerNotification(
-        question.author,
-        authorId,
-        questionId,
-        question.title
-      );
-    }
-
-    res.status(201).json({ answer });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -169,13 +193,15 @@ router.post("/:id/vote", auth, async (req, res) => {
     // Create vote notification
     const question = await Question.findById(answer.question);
     if (question) {
+      const io = req.app.locals.io;
       await createVoteNotification(
         answer.author,
         userId,
         "answer",
         answer._id,
         answer.question,
-        question.title
+        question.title,
+        io
       );
     }
 
@@ -211,11 +237,13 @@ router.post("/:id/accept", auth, async (req, res) => {
     await answer.save();
 
     // Create accept notification
+    const io = req.app.locals.io;
     await createAcceptNotification(
       answer.author,
       question.author,
       question._id,
-      question.title
+      question.title,
+      io
     );
 
     res.json({ answer });

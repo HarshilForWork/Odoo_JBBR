@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const questionSchema = new mongoose.Schema(
   {
@@ -19,6 +19,12 @@ const questionSchema = new mongoose.Schema(
         lowercase: true,
       },
     ],
+    images: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -28,14 +34,18 @@ const questionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    upvotes: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    downvotes: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
+    upvotes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    downvotes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     answers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -49,9 +59,9 @@ const questionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
-)
+  }
+);
 
-questionSchema.index({ title: "text", description: "text", tags: "text" })
+questionSchema.index({ title: "text", description: "text", tags: "text" });
 
-module.exports = mongoose.model("Question", questionSchema)
+module.exports = mongoose.model("Question", questionSchema);

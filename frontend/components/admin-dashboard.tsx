@@ -117,8 +117,9 @@ export default function AdminDashboard() {
   const [globalMessageContent, setGlobalMessageContent] = useState("");
   const [globalMessagePriority, setGlobalMessagePriority] = useState("medium");
   const [globalMessageTarget, setGlobalMessageTarget] = useState("all");
-  const [editingGlobalMessage, setEditingGlobalMessage] = useState<GlobalMessage | null>(null);
-  
+  const [editingGlobalMessage, setEditingGlobalMessage] =
+    useState<GlobalMessage | null>(null);
+
   // User management states
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -144,23 +145,38 @@ export default function AdminDashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fetch stats
-      const statsRes = await axios.get("http://localhost:5001/api/admin/stats", { headers });
+      const statsRes = await axios.get(
+        "http://localhost:5000/api/admin/stats",
+        { headers }
+      );
       setStats(statsRes.data);
 
       // Fetch users
-      const usersRes = await axios.get("http://localhost:5001/api/admin/users", { headers });
+      const usersRes = await axios.get(
+        "http://localhost:5000/api/admin/users",
+        { headers }
+      );
       setUsers(usersRes.data.users);
 
       // Fetch questions
-      const questionsRes = await axios.get("http://localhost:5001/api/admin/questions", { headers });
+      const questionsRes = await axios.get(
+        "http://localhost:5000/api/admin/questions",
+        { headers }
+      );
       setQuestions(questionsRes.data.questions);
 
       // Fetch answers
-      const answersRes = await axios.get("http://localhost:5001/api/admin/answers", { headers });
+      const answersRes = await axios.get(
+        "http://localhost:5000/api/admin/answers",
+        { headers }
+      );
       setAnswers(answersRes.data.answers);
 
       // Fetch global messages
-      const messagesRes = await axios.get("http://localhost:5001/api/admin/global-messages", { headers });
+      const messagesRes = await axios.get(
+        "http://localhost:5000/api/admin/global-messages",
+        { headers }
+      );
       setGlobalMessages(messagesRes.data.messages);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to fetch data");
@@ -173,14 +189,16 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5001/api/admin/users/${userId}/role`,
+        `http://localhost:5000/api/admin/users/${userId}/role`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("User role updated successfully");
       fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update user role");
+      toast.error(
+        error?.response?.data?.message || "Failed to update user role"
+      );
     }
   };
 
@@ -195,7 +213,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5001/api/admin/users/${userToBan._id}/ban`,
+        `http://localhost:5000/api/admin/users/${userToBan._id}/ban`,
         { isBanned: true, banReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -213,7 +231,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5001/api/admin/users/${userId}/ban`,
+        `http://localhost:5000/api/admin/users/${userId}/ban`,
         { isBanned: false, banReason: "" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -225,13 +243,17 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5001/api/admin/users/${userId}`, {
+      await axios.delete(`http://localhost:5000/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("User deleted successfully");
@@ -242,32 +264,48 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this question? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5001/api/admin/questions/${questionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://localhost:5000/api/admin/questions/${questionId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       toast.success("Question deleted successfully");
       fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to delete question");
+      toast.error(
+        error?.response?.data?.message || "Failed to delete question"
+      );
     }
   };
 
   const handleDeleteAnswer = async (answerId: string) => {
-    if (!confirm("Are you sure you want to delete this answer? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this answer? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5001/api/admin/answers/${answerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://localhost:5000/api/admin/answers/${answerId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       toast.success("Answer deleted successfully");
       fetchData();
     } catch (error: any) {
@@ -278,15 +316,20 @@ export default function AdminDashboard() {
   const handleViewUserDetails = async (user: User) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5001/api/admin/users/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `http://localhost:5000/api/admin/users/${user._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setUserQuestions(response.data.questions);
       setUserAnswers(response.data.answers);
       setSelectedUser(user);
       setShowUserDetails(true);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to fetch user details");
+      toast.error(
+        error?.response?.data?.message || "Failed to fetch user details"
+      );
     }
   };
 
@@ -299,7 +342,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5001/api/admin/global-messages",
+        "http://localhost:5000/api/admin/global-messages",
         {
           title: globalMessageTitle.trim(),
           message: globalMessageContent,
@@ -316,7 +359,9 @@ export default function AdminDashboard() {
       setShowGlobalMessageForm(false);
       fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to send global message");
+      toast.error(
+        error?.response?.data?.message || "Failed to send global message"
+      );
     }
   };
 
@@ -327,24 +372,45 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5001/api/admin/global-messages/${messageId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://localhost:5000/api/admin/global-messages/${messageId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       toast.success("Global message deleted successfully");
       fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to delete global message");
+      toast.error(
+        error?.response?.data?.message || "Failed to delete global message"
+      );
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-                         user.email.toLowerCase().includes(userSearch.toLowerCase());
-    const matchesRole = userRoleFilter === "all" || user.role === userRoleFilter;
-    const matchesBan = userBanFilter === "all" || 
-                      (userBanFilter === "banned" && user.isBanned) ||
-                      (userBanFilter === "active" && !user.isBanned);
-    
+  const handleCleanupNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        "http://localhost:5000/api/notifications/cleanup",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "Failed to cleanup notifications"
+      );
+    }
+  };
+
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesRole =
+      userRoleFilter === "all" || user.role === userRoleFilter;
+    const matchesBan =
+      userBanFilter === "all" ||
+      (userBanFilter === "banned" && user.isBanned) ||
+      (userBanFilter === "active" && !user.isBanned);
+
     return matchesSearch && matchesRole && matchesBan;
   });
 
@@ -364,7 +430,9 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Manage users, content, and platform communications</p>
+          <p className="text-gray-600 mt-2">
+            Manage users, content, and platform communications
+          </p>
         </div>
 
         {/* Tab Navigation */}
@@ -415,9 +483,15 @@ export default function AdminDashboard() {
                     <Users className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Users</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-                    <p className="text-xs text-gray-500">{stats.activeUsers} active, {stats.bannedUsers} banned</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Total Users
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.totalUsers}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.activeUsers} active, {stats.bannedUsers} banned
+                    </p>
                   </div>
                 </div>
               </div>
@@ -427,9 +501,15 @@ export default function AdminDashboard() {
                     <MessageSquare className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Questions</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalQuestions}</p>
-                    <p className="text-xs text-gray-500">{stats.recentQuestions} this week</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Total Questions
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.totalQuestions}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.recentQuestions} this week
+                    </p>
                   </div>
                 </div>
               </div>
@@ -439,9 +519,15 @@ export default function AdminDashboard() {
                     <MessageSquare className="w-6 h-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Answers</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalAnswers}</p>
-                    <p className="text-xs text-gray-500">{stats.recentAnswers} this week</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Total Answers
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.totalAnswers}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.recentAnswers} this week
+                    </p>
                   </div>
                 </div>
               </div>
@@ -451,26 +537,59 @@ export default function AdminDashboard() {
                     <Crown className="w-6 h-6 text-red-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Admin Users</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.adminUsers}</p>
-                    <p className="text-xs text-gray-500">Platform administrators</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Admin Users
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.adminUsers}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Platform administrators
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Admin Actions */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Admin Actions
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  onClick={handleCleanupNotifications}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Cleanup Orphaned Notifications
+                </Button>
+              </div>
+            </div>
+
             {/* Top Users */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Contributors</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Top Contributors
+              </h3>
               <div className="space-y-3">
                 {stats.topUsers.map((user, index) => (
-                  <div key={user.username} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div
+                    key={user.username}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
                     <div className="flex items-center">
-                      <span className="text-lg font-bold text-gray-400 mr-3">#{index + 1}</span>
+                      <span className="text-lg font-bold text-gray-400 mr-3">
+                        #{index + 1}
+                      </span>
                       <div>
-                        <p className="font-medium text-gray-900">{user.username}</p>
+                        <p className="font-medium text-gray-900">
+                          {user.username}
+                        </p>
                         <p className="text-sm text-gray-500">
-                          {user.questionCount} questions • {user.answerCount} answers
+                          {user.questionCount} questions • {user.answerCount}{" "}
+                          answers
                         </p>
                       </div>
                     </div>
@@ -553,17 +672,24 @@ export default function AdminDashboard() {
                       <tr key={user._id}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.username}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {user.email}
+                            </div>
                             <div className="text-xs text-gray-400">
-                              Joined {new Date(user.createdAt).toLocaleDateString()}
+                              Joined{" "}
+                              {new Date(user.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <select
                             value={user.role}
-                            onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                            onChange={(e) =>
+                              handleRoleChange(user._id, e.target.value)
+                            }
                             className="text-sm border border-gray-300 rounded-md px-2 py-1"
                           >
                             <option value="guest">Guest</option>
@@ -578,7 +704,9 @@ export default function AdminDashboard() {
                                 Banned
                               </span>
                               {user.banReason && (
-                                <div className="text-xs text-gray-500 mt-1">{user.banReason}</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {user.banReason}
+                                </div>
                               )}
                             </div>
                           ) : (
@@ -637,7 +765,9 @@ export default function AdminDashboard() {
         {activeTab === "messages" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Global Messages</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Global Messages
+              </h2>
               <Button onClick={() => setShowGlobalMessageForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Send Global Message
@@ -673,8 +803,12 @@ export default function AdminDashboard() {
                     {globalMessages.map((message) => (
                       <tr key={message._id}>
                         <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{message.title}</div>
-                          <div className="text-sm text-gray-500 line-clamp-2">{message.message}</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {message.title}
+                          </div>
+                          <div className="text-sm text-gray-500 line-clamp-2">
+                            {message.message}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {message.author.username}
@@ -710,7 +844,9 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => handleDeleteGlobalMessage(message._id)}
+                            onClick={() =>
+                              handleDeleteGlobalMessage(message._id)
+                            }
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -747,15 +883,24 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* User Questions */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Questions ({userQuestions.length})</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Questions ({userQuestions.length})
+                  </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {userQuestions.map((question) => (
-                      <div key={question._id} className="p-3 bg-gray-50 rounded-lg">
+                      <div
+                        key={question._id}
+                        className="p-3 bg-gray-50 rounded-lg"
+                      >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{question.title}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {question.title}
+                            </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(question.createdAt).toLocaleDateString()}
+                              {new Date(
+                                question.createdAt
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                           <button
@@ -772,14 +917,23 @@ export default function AdminDashboard() {
 
                 {/* User Answers */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Answers ({userAnswers.length})</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Answers ({userAnswers.length})
+                  </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {userAnswers.map((answer) => (
-                      <div key={answer._id} className="p-3 bg-gray-50 rounded-lg">
+                      <div
+                        key={answer._id}
+                        className="p-3 bg-gray-50 rounded-lg"
+                      >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{answer.question.title}</p>
-                            <p className="text-xs text-gray-500 line-clamp-2">{answer.content}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {answer.question.title}
+                            </p>
+                            <p className="text-xs text-gray-500 line-clamp-2">
+                              {answer.content}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {new Date(answer.createdAt).toLocaleDateString()}
                             </p>
@@ -831,7 +985,10 @@ export default function AdminDashboard() {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={confirmBanUser} className="bg-red-600 hover:bg-red-700">
+                  <Button
+                    onClick={confirmBanUser}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
                     Ban User
                   </Button>
                 </div>
@@ -845,7 +1002,9 @@ export default function AdminDashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Send Global Message</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Send Global Message
+                </h3>
                 <button
                   onClick={() => {
                     setShowGlobalMessageForm(false);
@@ -940,4 +1099,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-} 
+}

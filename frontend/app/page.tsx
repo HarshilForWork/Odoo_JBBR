@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSocket } from "@/lib/socket-context";
@@ -61,28 +61,91 @@ export default function HomePage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce(async (search: string) => {
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `http://localhost:5000/api/questions`,
+          {
+            params: {
+              page: 1,
+              sort: sortBy,
+              search: search,
+            },
+          }
+        );
+        setQuestions(response.data.questions);
+        setTotalPages(response.data.totalPages);
+        setCurrentPage(1);
+      } catch (error) {
+        toast.error("Failed to fetch questions");
+      } finally {
+        setLoading(false);
+      }
+    }, 300),
+    [sortBy]
+  );
+
+  // Debounce utility function
+  function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout;
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  }
+
   useEffect(() => {
     fetchQuestions();
   }, [sortBy, currentPage]);
+
+  // Real-time search effect
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      fetchQuestions();
+    } else {
+      debouncedSearch(searchTerm);
+    }
+  }, [searchTerm, debouncedSearch]);
 
   useEffect(() => {
     if (socket) {
       socket.on("new-question", (question: Question) => {
         setQuestions((prev) => [question, ...prev]);
         toast.success("New question posted!");
+        refreshNotifications(); // Refresh notifications after new question
       });
+
+      // Listen for new notifications
+      socket.on("new-notification", (notification) => {
+        console.log("Received new notification:", notification);
+        setNotifications((prev) => [notification, ...prev]);
+        toast.success("New notification received!");
+      });
+
+      // Join user's notification room
+      if (user) {
+        socket.emit("join-user", user._id);
+      }
+
       return () => {
         socket.off("new-question");
+        socket.off("new-notification");
       };
     }
-  }, [socket]);
+  }, [socket, user]);
 
   // Check login state and fetch user profile
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5001/api/auth/profile", {
+        .get("http://localhost:5000/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -97,17 +160,34 @@ export default function HomePage() {
     if (user) {
       // Fetch notifications
       axios
-        .get("http://localhost:5001/api/notifications", {
+        .get("http://localhost:5000/api/notifications", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
-        .then((res) => setNotifications(res.data.notifications || []))
-        .catch(() => setNotifications([]));
+        .then((res) => {
+          console.log("Fetched notifications:", res.data);
+          setNotifications(res.data || []);
+        })
+        .catch((error) => {
+          console.error("Error fetching notifications:", error);
+          setNotifications([]);
+        });
 
       // Fetch announcements
       axios
-        .get("http://localhost:5001/api/announcements")
-        .then((res) => setAnnouncements(res.data.announcements || []))
-        .catch(() => setAnnouncements([]));
+        .get("http://localhost:5000/api/announcements")
+        .then((res) => {
+          console.log("Fetched announcements:", res.data.announcements);
+          setAnnouncements(res.data.announcements || []);
+        })
+        .catch((error) => {
+          console.error("Error fetching announcements:", error);
+          setAnnouncements([]);
+        });
+
+      // Set up periodic refresh every 30 seconds
+      const interval = setInterval(refreshNotifications, 30000);
+
+      return () => clearInterval(interval);
     } else {
       setNotifications([]);
       setAnnouncements([]);
@@ -121,10 +201,46 @@ export default function HomePage() {
     window.location.reload();
   };
 
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await axios.patch(
+        `http://localhost:5000/api/notifications/${notificationId}/read`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      // Update the notification in the local state
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.patch(
+        "http://localhost:5000/api/notifications/read-all",
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      // Update all notifications in the local state
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      toast.success("All notifications marked as read!");
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      toast.error("Failed to mark all notifications as read.");
+    }
+  };
+
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5001/api/questions`, {
+      const response = await axios.get(`http://localhost:5000/api/questions`, {
         params: {
           page: currentPage,
           sort: sortBy,
@@ -140,10 +256,22 @@ export default function HomePage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    fetchQuestions();
+  const refreshNotifications = async () => {
+    if (!user) return;
+
+    try {
+      const [notificationsRes, announcementsRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/notifications", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }),
+        axios.get("http://localhost:5000/api/announcements"),
+      ]);
+
+      setNotifications(notificationsRes.data || []);
+      setAnnouncements(announcementsRes.data.announcements || []);
+    } catch (error) {
+      console.error("Error refreshing notifications:", error);
+    }
   };
 
   // Filter options
@@ -169,47 +297,189 @@ export default function HomePage() {
                     className="w-8 h-8 rounded-full flex items-center justify-center focus:outline-none hover:bg-gray-100"
                     onClick={() => setShowNotifications((v) => !v)}
                   >
-                    <Bell className={`h-5 w-5 ${announcements.length > 0 ? 'text-red-500' : 'text-gray-500'}`} />
-                    {announcements.length > 0 && (
+                    <Bell
+                      className={`h-5 w-5 ${
+                        notifications.filter((n) => !n.isRead).length > 0 ||
+                        announcements.length > 0
+                          ? "text-red-500"
+                          : "text-blue-500"
+                      }`}
+                    />
+                    {(notifications.filter((n) => !n.isRead).length > 0 ||
+                      announcements.length > 0) && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                        {announcements.length}
+                        {notifications.filter((n) => !n.isRead).length +
+                          announcements.length}
                       </span>
                     )}
                   </button>
-                                      {showNotifications && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                        <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900">
-                          Notifications & Announcements
-                        </div>
-                        {announcements.length > 0 && (
-                          <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
-                            <div className="text-sm font-medium text-blue-900 mb-2">📢 Announcements</div>
-                            {announcements.map((announcement) => (
-                              <div key={announcement._id} className="text-sm text-blue-800 mb-2">
-                                <div className="font-medium">{announcement.title}</div>
-                                <div className="text-xs text-blue-600">
-                                  {new Date(announcement.createdAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {notifications.length === 0 && announcements.length === 0 ? (
-                          <div className="px-4 py-6 text-center text-gray-500">
-                            No notifications to display.
-                          </div>
-                        ) : (
-                          notifications.map((n, i) => (
-                            <div
-                              key={i}
-                              className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700"
-                            >
-                              {n.message || "Notification"}
-                            </div>
-                          ))
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                      <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900 flex justify-between items-center">
+                        <span>Notifications & Announcements</span>
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            Mark all as read
+                          </button>
                         )}
                       </div>
-                    )}
+                      {announcements.length > 0 && (
+                        <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
+                          <div className="text-sm font-medium text-blue-900 mb-2 flex justify-between items-center">
+                            <span>📢 Announcements</span>
+                            <button
+                              onClick={() => setAnnouncements([])}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                          {announcements.map((announcement) => (
+                            <div
+                              key={announcement._id}
+                              className="text-sm text-blue-800 mb-2"
+                            >
+                              <div className="font-medium">
+                                {announcement.title}
+                              </div>
+                              <div className="text-xs text-blue-600">
+                                {new Date(
+                                  announcement.createdAt
+                                ).toLocaleDateString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {notifications.length === 0 &&
+                      announcements.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-gray-500">
+                          <div className="text-2xl mb-2">🔔</div>
+                          <div className="text-sm">No notifications yet</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            You'll see notifications here when someone interacts
+                            with your content
+                          </div>
+                        </div>
+                      ) : (
+                        notifications.map((notification, i) => (
+                          <div
+                            key={notification._id || i}
+                            className={`px-4 py-3 border-b border-gray-100 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors ${
+                              !notification.isRead ? "bg-blue-50" : ""
+                            }`}
+                            onClick={async () => {
+                              // Mark as read if not already read
+                              if (!notification.isRead) {
+                                markNotificationAsRead(notification._id);
+                              }
+
+                              // Debug: Log notification structure
+                              console.log(
+                                "Notification clicked:",
+                                notification
+                              );
+                              console.log(
+                                "Question field:",
+                                notification.question
+                              );
+                              console.log(
+                                "Question type:",
+                                typeof notification.question
+                              );
+
+                              // Navigate based on notification type
+                              if (notification.question) {
+                                // Handle both populated question object and question ID string
+                                const questionId =
+                                  typeof notification.question === "object"
+                                    ? notification.question._id
+                                    : notification.question;
+                                console.log(
+                                  "Extracted question ID:",
+                                  questionId
+                                );
+
+                                // Verify the question exists before navigating
+                                try {
+                                  const response = await axios.get(
+                                    `http://localhost:5000/api/questions/${questionId}`
+                                  );
+                                  if (response.data.question) {
+                                    router.push(`/questions/${questionId}`);
+                                    setShowNotifications(false);
+                                  } else {
+                                    toast.error("Question no longer exists");
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "Error verifying question:",
+                                    error
+                                  );
+                                  toast.error(
+                                    "Question not found or no longer exists"
+                                  );
+                                }
+                              } else if (notification.link) {
+                                router.push(notification.link);
+                                setShowNotifications(false);
+                              }
+                            }}
+                          >
+                            <div className="font-medium text-gray-900 mb-1 flex items-center justify-between">
+                              <span className="flex items-center gap-2">
+                                {notification.type === "answer" && "💬"}
+                                {notification.type === "vote" && "👍"}
+                                {notification.type === "accept" && "✅"}
+                                {notification.type === "global_message" && "📢"}
+                                {notification.title}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {!notification.isRead && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setNotifications((prev) =>
+                                      prev.filter(
+                                        (n) => n._id !== notification._id
+                                      )
+                                    );
+                                  }}
+                                  className="text-gray-400 hover:text-gray-600 text-xs"
+                                  title="Dismiss notification"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-gray-600 mb-1">
+                              {notification.message}
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center justify-between">
+                              <span>
+                                by {notification.sender?.username || "Unknown"}
+                              </span>
+                              <span>
+                                {new Date(
+                                  notification.createdAt
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {(notification.question || notification.link) && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                Click to view →
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               {user ? (
@@ -278,17 +548,25 @@ export default function HomePage() {
       {announcements.length > 0 && (
         <div className="max-w-4xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-blue-900 mb-3">📢 Platform Announcements</h3>
+            <h3 className="text-lg font-semibold text-blue-900 mb-3">
+              📢 Platform Announcements
+            </h3>
             <div className="space-y-3">
               {announcements.map((announcement) => (
-                <div key={announcement._id} className="bg-white rounded-lg p-4 border border-blue-100">
-                  <h4 className="font-medium text-blue-900 mb-2">{announcement.title}</h4>
-                  <div 
+                <div
+                  key={announcement._id}
+                  className="bg-white rounded-lg p-4 border border-blue-100"
+                >
+                  <h4 className="font-medium text-blue-900 mb-2">
+                    {announcement.title}
+                  </h4>
+                  <div
                     className="text-blue-800 text-sm"
                     dangerouslySetInnerHTML={{ __html: announcement.message }}
                   />
                   <div className="text-xs text-blue-600 mt-2">
-                    By {announcement.author?.username || "Admin"} • {new Date(announcement.createdAt).toLocaleDateString()}
+                    By {announcement.author?.username || "Admin"} •{" "}
+                    {new Date(announcement.createdAt).toLocaleDateString()}
                   </div>
                 </div>
               ))}
@@ -312,8 +590,10 @@ export default function HomePage() {
               }
             }}
           >
-            <Plus className="h-4 w-4" /> 
-            {user?.role === "admin" ? "Send Universal Message" : "Ask New Question"}
+            <Plus className="h-4 w-4" />
+            {user?.role === "admin"
+              ? "Send Universal Message"
+              : "Ask New Question"}
           </button>
           <div className="flex items-center gap-2">
             {filterOptions.map((opt) => (
@@ -331,38 +611,43 @@ export default function HomePage() {
               </Button>
             ))}
           </div>
-          <form
-            onSubmit={handleSearch}
-            className="flex-1 flex gap-2 justify-end"
-          >
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xs"
-            />
-            <Button type="submit" variant="outline" size="icon">
-              <Search className="h-5 w-5" />
-            </Button>
-          </form>
+          <div className="flex-1 flex gap-2 justify-end">
+            <div className="relative max-w-xs">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              {loading && searchTerm && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Filter Bar (Mobile) */}
         {showMobileFilters && (
           <div className="lg:hidden bg-white border border-gray-200 rounded-lg p-4 mb-4 flex flex-col gap-3">
-            <form onSubmit={handleSearch} className="flex gap-2 mb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search questions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
+                className="pl-10"
               />
-              <Button type="submit" variant="outline" size="icon">
-                <Search className="h-5 w-5" />
-              </Button>
-            </form>
+              {loading && searchTerm && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </div>
             <div className="flex flex-col gap-2">
               {filterOptions.map((opt) => (
                 <Button
@@ -391,19 +676,46 @@ export default function HomePage() {
                 }
               }}
             >
-              <Plus className="h-4 w-4" /> 
-              {user?.role === "admin" ? "Send Universal Message" : "Ask New Question"}
+              <Plus className="h-4 w-4" />
+              {user?.role === "admin"
+                ? "Send Universal Message"
+                : "Ask New Question"}
             </button>
           </div>
         )}
 
         {/* Questions List */}
+        {searchTerm && !loading && (
+          <div className="mb-4 text-sm text-gray-600">
+            Found {questions.length} question{questions.length !== 1 ? "s" : ""}{" "}
+            for "{searchTerm}"
+          </div>
+        )}
         <div className="space-y-4">
           {loading ? (
-            <div className="text-center py-8">Loading questions...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-gray-600">Searching...</p>
+            </div>
           ) : questions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No questions found. Be the first to ask!
+              {searchTerm ? (
+                <>
+                  <p className="text-lg font-medium mb-2">No questions found</p>
+                  <p className="text-sm">
+                    Try adjusting your search terms or browse all questions
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    Clear search
+                  </Button>
+                </>
+              ) : (
+                <p>No questions found. Be the first to ask!</p>
+              )}
             </div>
           ) : (
             questions.map((question) => {

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
@@ -14,7 +14,14 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["answer", "comment", "mention", "vote", "accept"],
+      enum: [
+        "answer",
+        "comment",
+        "mention",
+        "vote",
+        "accept",
+        "global_message",
+      ],
       required: true,
     },
     title: {
@@ -43,9 +50,9 @@ const notificationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
-)
+  }
+);
 
-notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 })
+notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 
-module.exports = mongoose.model("Notification", notificationSchema) 
+module.exports = mongoose.model("Notification", notificationSchema);

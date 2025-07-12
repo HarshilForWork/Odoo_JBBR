@@ -18,7 +18,7 @@ const toolbarOptions = [
   [{ header: [1, 2, 3, false] }],
   ["bold", "italic", "strike"],
   [{ list: "ordered" }, { list: "bullet" }],
-  ["link", "image"],
+  ["link"],
   [{ align: [] }],
   ["emoji"],
   ["clean"],
@@ -32,7 +32,6 @@ const formats = [
   "list",
   "bullet",
   "link",
-  "image",
   "align",
   "emoji",
   "clean",
@@ -54,7 +53,6 @@ export function RichTextEditor({
           toolbar: toolbarOptions,
         }}
         formats={formats}
-        className="min-h-[200px]"
         theme="snow"
       />
     </div>

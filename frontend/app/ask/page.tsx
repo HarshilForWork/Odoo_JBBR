@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import { Bell, Home, UserCircle, LogOut } from "lucide-react";
+import { Bell, Home, UserCircle, LogOut, Upload, X } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -22,6 +22,8 @@ export default function AskPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreview, setImagePreview] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -31,7 +33,7 @@ export default function AskPage() {
     const token = localStorage.getItem("token");
     if (token) {
       axios
-        .get("http://localhost:5001/api/auth/profile", {
+        .get("http://localhost:5000/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => setUser(res.data.user))
@@ -48,6 +50,42 @@ export default function AskPage() {
     window.location.reload();
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + images.length > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not an image file`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setImages((prev) => [...prev, ...validFiles]);
+
+    // Create previews
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview((prev) => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreview((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
@@ -57,15 +95,24 @@ export default function AskPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
+
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("description", description);
+      formData.append("tags", JSON.stringify(tags));
+
+      images.forEach((image, index) => {
+        formData.append("images", image);
+      });
+
       const response = await axios.post(
-        "http://localhost:5001/api/questions",
+        "http://localhost:5000/api/questions",
+        formData,
         {
-          title: title.trim(),
-          description,
-          tags,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
       toast.success("Question posted successfully!");
@@ -197,6 +244,44 @@ export default function AskPage() {
                 maxTags={5}
               />
               <p className="text-sm text-gray-500 mt-1">Add up to 5 tags</p>
+            </div>
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Add Images (max 5, 10MB each)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {imagePreview.map((preview, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 flex items-center justify-center"
+                      title="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <label htmlFor="image-upload" className="cursor-pointer">
+                  <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 hover:border-primary-500 hover:text-primary-600 transition-colors">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
             {/* Submit Button */}
             <div className="flex justify-end">

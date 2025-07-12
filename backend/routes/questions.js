@@ -1,6 +1,7 @@
 const express = require("express");
 const Question = require("../models/Question");
 const auth = require("../middleware/auth");
+const { createVoteNotification } = require("../utils/notifications");
 const router = express.Router();
 
 // Get all questions with pagination and filtering
@@ -86,20 +87,42 @@ router.get("/:id", async (req, res) => {
 // Create question
 router.post("/", auth, async (req, res) => {
   try {
-    const { title, description, tags } = req.body;
-    const authorId = req.user._id;
+    const upload = req.app.locals.upload;
 
-    const question = new Question({
-      title,
-      description,
-      tags: tags || [],
-      author: authorId,
+    // Handle file upload
+    upload.array("images", 5)(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+
+      try {
+        const { title, description, tags } = req.body;
+        const authorId = req.user._id;
+
+        // Process uploaded images
+        const imageUrls = [];
+        if (req.files && req.files.length > 0) {
+          req.files.forEach((file) => {
+            imageUrls.push(`http://localhost:5000/uploads/${file.filename}`);
+          });
+        }
+
+        const question = new Question({
+          title,
+          description,
+          tags: tags ? JSON.parse(tags) : [],
+          images: imageUrls,
+          author: authorId,
+        });
+
+        await question.save();
+        await question.populate("author", "username avatar");
+
+        res.status(201).json({ question });
+      } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+      }
     });
-
-    await question.save();
-    await question.populate("author", "username avatar");
-
-    res.status(201).json({ question });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -209,6 +232,18 @@ router.post("/:id/vote", auth, async (req, res) => {
     }
 
     await question.save();
+
+    // Create vote notification
+    const io = req.app.locals.io;
+    await createVoteNotification(
+      question.author,
+      userId,
+      "question",
+      question._id,
+      question._id,
+      question.title,
+      io
+    );
 
     // Return the updated question with populated answers
     const updatedQuestion = await Question.findById(question._id)
